@@ -1,8 +1,11 @@
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import { loadConfig } from './config.js'
 import { createDb } from './db/index.js'
 import { healthRoutes } from './routes/health.js'
+import { gamesRoutes } from './routes/games.js'
+import { IgdbService } from './services/igdb.js'
 import { startScheduler } from './scheduler/index.js'
 
 const config = loadConfig()
@@ -18,10 +21,17 @@ try {
   process.exit(1)
 }
 
+const igdb = new IgdbService({
+  clientId: config.twitchClientId,
+  clientSecret: config.twitchClientSecret,
+})
+
 const scheduler = startScheduler()
 
 const app = new Hono()
+app.use('*', cors())
 app.route('/', healthRoutes(db))
+app.route('/', gamesRoutes(db, igdb))
 
 const server = serve(
   { fetch: app.fetch, port: config.serverPort },

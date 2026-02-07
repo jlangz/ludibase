@@ -31,3 +31,4 @@ pnpm-debug.log*
 # Misc
 *.pem
 coverage/
+.mcp.json

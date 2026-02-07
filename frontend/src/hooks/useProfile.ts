@@ -3,6 +3,15 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 import type { Profile } from '../types'
 
+interface ProfileUpdates {
+  username?: string | null
+  display_name?: string | null
+  bio?: string | null
+  avatar_url?: string | null
+  platforms?: string[] | null
+  subscriptions?: string[] | null
+}
+
 export function useProfile() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -23,7 +32,7 @@ export function useProfile() {
   })
 
   const mutation = useMutation({
-    mutationFn: async (updates: { display_name?: string }) => {
+    mutationFn: async (updates: ProfileUpdates) => {
       const { error } = await supabase
         .from('profiles')
         .update({ ...updates, updated_at: new Date().toISOString() })
@@ -40,9 +49,10 @@ export function useProfile() {
     profile: query.data ?? null,
     isLoading: query.isLoading,
     error: query.error,
-    updateProfile: mutation.mutate,
+    updateProfile: mutation.mutateAsync,
     isUpdating: mutation.isPending,
     updateError: mutation.error,
     isUpdateSuccess: mutation.isSuccess,
+    resetMutation: mutation.reset,
   }
 }
