@@ -3,20 +3,15 @@ import { useAvatarUpload } from '../hooks/useAvatarUpload'
 
 interface AvatarUploaderProps {
   avatarUrl: string | null
-  displayName: string | null
+  username: string | null
   onAvatarChange: (url: string | null) => void
 }
 
-export function AvatarUploader({ avatarUrl, displayName, onAvatarChange }: AvatarUploaderProps) {
+export function AvatarUploader({ avatarUrl, username, onAvatarChange }: AvatarUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { uploadAvatar, removeAvatar, isUploading, error } = useAvatarUpload()
 
-  const initials = (displayName ?? '?')
-    .split(' ')
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase()
+  const initials = (username ?? '?').slice(0, 2).toUpperCase()
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]

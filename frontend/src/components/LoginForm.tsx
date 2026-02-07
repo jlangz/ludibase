@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
-export function LoginForm({ onNavigate }: { onNavigate: (page: string) => void }) {
+export function LoginForm() {
   const { signIn } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -18,7 +20,7 @@ export function LoginForm({ onNavigate }: { onNavigate: (page: string) => void }
       setError(error.message)
       setLoading(false)
     } else {
-      onNavigate('home')
+      navigate('/')
     }
   }
 
@@ -63,12 +65,9 @@ export function LoginForm({ onNavigate }: { onNavigate: (page: string) => void }
       </form>
       <p className="mt-4 text-center text-sm text-gray-400">
         Don&apos;t have an account?{' '}
-        <button
-          onClick={() => onNavigate('signup')}
-          className="text-blue-400 hover:underline"
-        >
+        <Link to="/signup" className="text-blue-400 hover:underline">
           Sign up
-        </button>
+        </Link>
       </p>
     </div>
   )

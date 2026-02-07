@@ -5,7 +5,6 @@ import type { Profile } from '../types'
 
 interface ProfileUpdates {
   username?: string | null
-  display_name?: string | null
   bio?: string | null
   avatar_url?: string | null
   platforms?: string[] | null

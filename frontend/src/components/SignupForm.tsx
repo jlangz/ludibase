@@ -1,7 +1,8 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 
-export function SignupForm({ onNavigate }: { onNavigate: (page: string) => void }) {
+export function SignupForm() {
   const { signUp } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -38,12 +39,9 @@ export function SignupForm({ onNavigate }: { onNavigate: (page: string) => void 
           We sent a confirmation link to <span className="text-gray-100">{email}</span>.
           Click it to activate your account.
         </p>
-        <button
-          onClick={() => onNavigate('login')}
-          className="text-blue-400 hover:underline"
-        >
+        <Link to="/login" className="text-blue-400 hover:underline">
           Back to log in
-        </button>
+        </Link>
       </div>
     )
   }
@@ -103,12 +101,9 @@ export function SignupForm({ onNavigate }: { onNavigate: (page: string) => void 
       </form>
       <p className="mt-4 text-center text-sm text-gray-400">
         Already have an account?{' '}
-        <button
-          onClick={() => onNavigate('login')}
-          className="text-blue-400 hover:underline"
-        >
+        <Link to="/login" className="text-blue-400 hover:underline">
           Log in
-        </button>
+        </Link>
       </p>
     </div>
   )

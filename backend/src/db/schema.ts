@@ -3,7 +3,6 @@ import { pgTable, uuid, text, timestamp, serial, integer, jsonb } from 'drizzle-
 export const profiles = pgTable('profiles', {
   id: uuid('id').primaryKey(),
   username: text('username').unique(),
-  displayName: text('display_name'),
   bio: text('bio'),
   avatarUrl: text('avatar_url'),
   platforms: jsonb('platforms').$type<string[]>(),

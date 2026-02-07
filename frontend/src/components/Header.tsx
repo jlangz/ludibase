@@ -1,30 +1,35 @@
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useProfile } from '../hooks/useProfile'
 
-export function Header({ onNavigate }: { onNavigate: (page: string) => void }) {
+export function Header() {
   const { user, loading, signOut } = useAuth()
+  const { profile } = useProfile()
+  const navigate = useNavigate()
+
+  async function handleSignOut() {
+    await signOut()
+    navigate('/')
+  }
 
   return (
     <header className="flex items-center justify-between border-b border-gray-800 px-6 py-4">
-      <button
-        onClick={() => onNavigate('home')}
-        className="text-xl font-bold hover:text-gray-300"
-      >
+      <Link to="/" className="text-xl font-bold hover:text-gray-300">
         Game Subscription Tracker
-      </button>
+      </Link>
 
       {!loading && (
         <nav className="flex items-center gap-4">
           {user ? (
             <>
-              <span className="text-sm text-gray-400">{user.email}</span>
-              <button
-                onClick={() => onNavigate('profile')}
-                className="text-sm text-blue-400 hover:underline"
-              >
+              <span className="text-sm text-gray-400">
+                {profile?.username ? `@${profile.username}` : user.email}
+              </span>
+              <Link to="/profile" className="text-sm text-blue-400 hover:underline">
                 Profile
-              </button>
+              </Link>
               <button
-                onClick={signOut}
+                onClick={handleSignOut}
                 className="rounded border border-gray-700 px-3 py-1 text-sm hover:bg-gray-800"
               >
                 Log Out
@@ -32,18 +37,15 @@ export function Header({ onNavigate }: { onNavigate: (page: string) => void }) {
             </>
           ) : (
             <>
-              <button
-                onClick={() => onNavigate('login')}
-                className="text-sm text-blue-400 hover:underline"
-              >
+              <Link to="/login" className="text-sm text-blue-400 hover:underline">
                 Log In
-              </button>
-              <button
-                onClick={() => onNavigate('signup')}
+              </Link>
+              <Link
+                to="/signup"
                 className="rounded bg-blue-600 px-3 py-1 text-sm font-medium hover:bg-blue-700"
               >
                 Sign Up
-              </button>
+              </Link>
             </>
           )}
         </nav>

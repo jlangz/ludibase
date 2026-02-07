@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useProfile } from '../hooks/useProfile'
 import { useUsernameCheck, validateUsername } from '../hooks/useUsernameCheck'
 import { useAuth } from '../hooks/useAuth'
@@ -8,19 +9,18 @@ import { PLATFORMS, SUBSCRIPTION_SERVICES } from '../constants/gaming'
 
 interface FormState {
   username: string
-  displayName: string
   bio: string
   platforms: string[]
   subscriptions: string[]
 }
 
-export function ProfileEditor({ onNavigate }: { onNavigate: (page: string) => void }) {
+export function ProfileEditor() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { profile, isLoading, updateProfile, isUpdating, isUpdateSuccess, resetMutation } = useProfile()
 
   const [form, setForm] = useState<FormState>({
     username: '',
-    displayName: '',
     bio: '',
     platforms: [],
     subscriptions: [],
@@ -37,7 +37,6 @@ export function ProfileEditor({ onNavigate }: { onNavigate: (page: string) => vo
     if (profile) {
       setForm({
         username: profile.username ?? '',
-        displayName: profile.display_name ?? '',
         bio: profile.bio ?? '',
         platforms: profile.platforms ?? [],
         subscriptions: profile.subscriptions ?? [],
@@ -74,7 +73,6 @@ export function ProfileEditor({ onNavigate }: { onNavigate: (page: string) => vo
     try {
       await updateProfile({
         username: trimmedUsername,
-        display_name: form.displayName.trim() || null,
         bio: form.bio.trim() || null,
         avatar_url: avatarUrl,
         platforms: form.platforms.length > 0 ? form.platforms : null,
@@ -123,7 +121,7 @@ export function ProfileEditor({ onNavigate }: { onNavigate: (page: string) => vo
           <h3 className="mb-4 text-lg font-semibold">Avatar</h3>
           <AvatarUploader
             avatarUrl={avatarUrl}
-            displayName={form.displayName}
+            username={form.username}
             onAvatarChange={handleAvatarChange}
           />
         </section>
@@ -169,21 +167,6 @@ export function ProfileEditor({ onNavigate }: { onNavigate: (page: string) => vo
             {!usernameValidation && isAvailable === false && (
               <p className="mt-1 text-xs text-red-400">Username is taken</p>
             )}
-          </div>
-
-          {/* Display Name */}
-          <div>
-            <label htmlFor="displayName" className="mb-1 block text-sm text-gray-400">
-              Display Name
-            </label>
-            <input
-              id="displayName"
-              type="text"
-              value={form.displayName}
-              onChange={(e) => updateField('displayName', e.target.value)}
-              placeholder="How you want to be known"
-              className="w-full rounded border border-gray-700 bg-gray-800 px-3 py-2 text-gray-100 focus:border-blue-500 focus:outline-none"
-            />
           </div>
 
           {/* Bio */}
@@ -266,7 +249,7 @@ export function ProfileEditor({ onNavigate }: { onNavigate: (page: string) => vo
           </button>
           <button
             type="button"
-            onClick={() => onNavigate('home')}
+            onClick={() => navigate('/')}
             className="rounded border border-gray-700 px-5 py-2.5 hover:bg-gray-800"
           >
             Cancel
