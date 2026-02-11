@@ -3,6 +3,7 @@
 export interface IgdbGame {
   id: number
   name: string
+  slug?: string
   summary?: string
   first_release_date?: number // Unix timestamp
   url?: string
@@ -10,6 +11,10 @@ export interface IgdbGame {
   platforms?: IgdbPlatform[]
   genres?: IgdbGenre[]
   involved_companies?: IgdbInvolvedCompany[]
+  category?: number
+  aggregated_rating?: number
+  aggregated_rating_count?: number
+  updated_at?: number // IGDB's own updated_at Unix timestamp
 }
 
 export interface IgdbCover {
@@ -42,10 +47,17 @@ export interface IgdbInvolvedCompany {
 export interface GameSearchResult {
   igdbId: number
   title: string
+  slug: string | null
   summary: string | null
   coverImageId: string | null
   platforms: string[]
   genres: string[]
+  category: number | null
+  developer: string | null
+  publisher: string | null
+  aggregatedRating: number | null
+  ratingCount: number | null
   firstReleaseDate: string | null // ISO date string
   igdbUrl: string | null
+  igdbUpdatedAt: number | null
 }

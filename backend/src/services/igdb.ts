@@ -54,10 +54,19 @@ export class IgdbService {
     return this.token.accessToken
   }
 
+  private verbose = true
+
+  /** Disable verbose request/response logging (useful for bulk imports). */
+  setVerbose(verbose: boolean) {
+    this.verbose = verbose
+  }
+
   private async igdbFetch(endpoint: string, body: string): Promise<unknown> {
     const token = await this.getAccessToken()
 
-    console.log('IGDB request:', endpoint, '\n' + body)
+    if (this.verbose) {
+      console.log('IGDB request:', endpoint, '\n' + body)
+    }
 
     const res = await fetch(`https://api.igdb.com/v4/${endpoint}`, {
       method: 'POST',
@@ -70,7 +79,10 @@ export class IgdbService {
     })
 
     const text = await res.text()
-    console.log('IGDB response (%d):', res.status, text.slice(0, 500))
+
+    if (this.verbose) {
+      console.log('IGDB response (%d):', res.status, text.slice(0, 500))
+    }
 
     if (!res.ok) {
       throw new Error(`IGDB API error (${res.status}): ${text}`)
@@ -91,10 +103,12 @@ export class IgdbService {
 
     const body = [
       `search "${safeQuery}";`,
-      'fields name, summary, first_release_date, url,',
+      'fields name, slug, summary, first_release_date, url, updated_at, category,',
       '  cover.image_id,',
       '  platforms.name, platforms.abbreviation,',
-      '  genres.name;',
+      '  genres.name,',
+      '  involved_companies.company.name, involved_companies.developer, involved_companies.publisher,',
+      '  aggregated_rating, aggregated_rating_count;',
       `limit ${Math.min(limit, 50)};`,
     ].join('\n')
 
@@ -108,10 +122,12 @@ export class IgdbService {
    */
   async getGameById(igdbId: number): Promise<GameSearchResult | null> {
     const body = [
-      `fields name, summary, first_release_date, url,`,
+      `fields name, slug, summary, first_release_date, url, updated_at, category,`,
       '  cover.image_id,',
       '  platforms.name, platforms.abbreviation,',
-      '  genres.name;',
+      '  genres.name,',
+      '  involved_companies.company.name, involved_companies.developer, involved_companies.publisher,',
+      '  aggregated_rating, aggregated_rating_count;',
       `where id = ${igdbId};`,
     ].join('\n')
 
@@ -120,21 +136,39 @@ export class IgdbService {
     if (raw.length === 0) return null
     return mapIgdbGameToResult(raw[0])
   }
+
+  /**
+   * Execute a raw Apicalypse query against the games endpoint.
+   * Used by the importer for bulk/incremental fetching.
+   */
+  async queryGames(apicalypseBody: string): Promise<IgdbGame[]> {
+    return (await this.igdbFetch('games', apicalypseBody)) as IgdbGame[]
+  }
 }
 
 // --- Helpers ---
 
 function mapIgdbGameToResult(game: IgdbGame): GameSearchResult {
+  const developers = game.involved_companies?.filter(ic => ic.developer) ?? []
+  const publishers = game.involved_companies?.filter(ic => ic.publisher) ?? []
+
   return {
     igdbId: game.id,
     title: game.name,
+    slug: game.slug ?? null,
     summary: game.summary ?? null,
     coverImageId: game.cover?.image_id ?? null,
     platforms: game.platforms?.map((p) => p.abbreviation ?? p.name) ?? [],
     genres: game.genres?.map((g) => g.name) ?? [],
+    category: game.category ?? null,
+    developer: developers[0]?.company.name ?? null,
+    publisher: publishers[0]?.company.name ?? null,
+    aggregatedRating: game.aggregated_rating ? Math.round(game.aggregated_rating) : null,
+    ratingCount: game.aggregated_rating_count ?? null,
     firstReleaseDate: game.first_release_date
       ? new Date(game.first_release_date * 1000).toISOString()
       : null,
     igdbUrl: game.url ?? null,
+    igdbUpdatedAt: game.updated_at ?? null,
   }
 }

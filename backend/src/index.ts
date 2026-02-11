@@ -5,7 +5,9 @@ import { loadConfig } from './config.js'
 import { createDb } from './db/index.js'
 import { healthRoutes } from './routes/health.js'
 import { gamesRoutes } from './routes/games.js'
+import { importRoutes } from './routes/import.js'
 import { IgdbService } from './services/igdb.js'
+import { GameImporter } from './services/game-importer.js'
 import { startScheduler } from './scheduler/index.js'
 
 const config = loadConfig()
@@ -26,12 +28,14 @@ const igdb = new IgdbService({
   clientSecret: config.twitchClientSecret,
 })
 
-const scheduler = startScheduler()
+const importer = new GameImporter(db, igdb)
+const scheduler = startScheduler(importer)
 
 const app = new Hono()
 app.use('*', cors())
 app.route('/', healthRoutes(db))
 app.route('/', gamesRoutes(db, igdb))
+app.route('/', importRoutes(db, importer))
 
 const server = serve(
   { fetch: app.fetch, port: config.serverPort },
