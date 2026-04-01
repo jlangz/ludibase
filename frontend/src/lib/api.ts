@@ -1,4 +1,4 @@
-import type { GameSearchResult } from '../types'
+import type { GameSearchResult, SubscriptionInfo, ServiceStats } from '../types'
 
 const API_BASE = '/api'
 
@@ -8,6 +8,43 @@ export async function searchGames(query: string): Promise<GameSearchResult[]> {
     const body = await res.json().catch(() => ({ error: 'Search failed' }))
     throw new Error(body.error ?? 'Search failed')
   }
+  return res.json()
+}
+
+export async function getPopularGames(limit = 20, page = 1): Promise<GameSearchResult[]> {
+  const res = await fetch(`${API_BASE}/games/popular?limit=${limit}&page=${page}`)
+  if (!res.ok) throw new Error('Failed to fetch popular games')
+  return res.json()
+}
+
+export async function getGameSubscriptions(igdbId: number): Promise<SubscriptionInfo[]> {
+  const res = await fetch(`${API_BASE}/games/${igdbId}/subscriptions`)
+  if (!res.ok) throw new Error('Failed to fetch subscriptions')
+  const data = await res.json()
+  return data.subscriptions
+}
+
+export async function checkSubscriptions(igdbIds: number[]): Promise<Record<number, string[]>> {
+  const res = await fetch(`${API_BASE}/subscriptions/check?igdbIds=${igdbIds.join(',')}`)
+  if (!res.ok) throw new Error('Failed to check subscriptions')
+  return res.json()
+}
+
+export async function getSubscriptionStats(): Promise<ServiceStats[]> {
+  const res = await fetch(`${API_BASE}/subscriptions/stats`)
+  if (!res.ok) throw new Error('Failed to fetch stats')
+  const data = await res.json()
+  return data.services
+}
+
+export async function getServiceGames(slug: string, page = 1, pageSize = 20): Promise<{
+  games: GameSearchResult[]
+  total: number
+  page: number
+  pageSize: number
+}> {
+  const res = await fetch(`${API_BASE}/subscriptions/service/${slug}?page=${page}&pageSize=${pageSize}`)
+  if (!res.ok) throw new Error('Failed to fetch service games')
   return res.json()
 }
 

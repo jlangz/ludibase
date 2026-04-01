@@ -58,6 +58,46 @@ export function gamesRoutes(db: Database, igdb: IgdbService) {
   })
 
   /**
+   * GET /games/popular?limit=20&page=1
+   * Returns games sorted by rating count (most-rated = most popular).
+   * Only includes games that are on at least one subscription service.
+   */
+  app.get('/games/popular', async (c) => {
+    const limit = Math.min(parseInt(c.req.query('limit') ?? '20', 10) || 20, 100)
+    const page = Math.max(parseInt(c.req.query('page') ?? '1', 10) || 1, 1)
+    const offset = (page - 1) * limit
+
+    // Score = ratingCount * (aggregatedRating / 100) — rewards both well-known AND well-rated games
+    const results = await db
+      .select({
+        igdbId: games.igdbId,
+        title: games.title,
+        slug: games.slug,
+        summary: games.summary,
+        coverImageId: games.coverImageId,
+        platforms: games.platforms,
+        genres: games.genres,
+        category: games.category,
+        developer: games.developer,
+        publisher: games.publisher,
+        aggregatedRating: games.aggregatedRating,
+        ratingCount: games.ratingCount,
+        firstReleaseDate: games.firstReleaseDate,
+        igdbUrl: games.igdbUrl,
+      })
+      .from(games)
+      .where(sql`${games.ratingCount} IS NOT NULL AND ${games.ratingCount} > 0 AND ${games.coverImageId} IS NOT NULL`)
+      .orderBy(sql`(${games.ratingCount} * COALESCE(${games.aggregatedRating}, 50)) DESC`)
+      .limit(limit)
+      .offset(offset)
+
+    return c.json(results.map(r => ({
+      ...r,
+      firstReleaseDate: r.firstReleaseDate?.toISOString() ?? null,
+    })))
+  })
+
+  /**
    * GET /games/:igdbId
    * Returns a single game by IGDB ID.
    * Checks local cache first, fetches from IGDB and caches if not found.

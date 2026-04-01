@@ -4,7 +4,7 @@ import { Header } from './components/Header'
 import { LoginForm } from './components/LoginForm'
 import { SignupForm } from './components/SignupForm'
 import { ProfileEditor } from './components/ProfileEditor'
-import { GameSearch } from './components/GameSearch'
+import { HomePage } from './components/HomePage'
 import { ResetPasswordForm } from './components/ResetPasswordForm'
 import { useAuth } from './hooks/useAuth'
 
@@ -19,7 +19,7 @@ function AppContent() {
           <ResetPasswordForm />
         ) : (
           <Routes>
-            <Route path="/" element={<GameSearch />} />
+            <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/signup" element={<SignupForm />} />
             <Route path="/profile" element={<ProfileEditor />} />

@@ -26,3 +26,14 @@ export interface GameSearchResult {
   igdbUrl: string | null
   igdbUpdatedAt: number | null
 }
+
+export interface SubscriptionInfo {
+  service: string
+  source: string
+  addedAt: string
+}
+
+export interface ServiceStats {
+  slug: string
+  count: number
+}
