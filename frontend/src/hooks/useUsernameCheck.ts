@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 
@@ -13,24 +13,22 @@ export function validateUsername(username: string): string | null {
 
 export function useUsernameCheck(username: string, currentUsername: string | null, debounceMs = 400) {
   const [debouncedUsername, setDebouncedUsername] = useState('')
+  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
+    clearTimeout(timeoutRef.current)
     const trimmed = username.trim().toLowerCase()
+    const isCurrent = trimmed === (currentUsername ?? '').toLowerCase()
+    const isInvalid = !trimmed || !!validateUsername(trimmed)
 
-    // Don't check if it's the user's current username
-    if (trimmed === (currentUsername ?? '').toLowerCase()) {
-      setDebouncedUsername('')
-      return
+    if (isCurrent || isInvalid) {
+      // Clear immediately via 0ms timeout to avoid synchronous setState in effect
+      timeoutRef.current = setTimeout(() => setDebouncedUsername(''), 0)
+    } else {
+      timeoutRef.current = setTimeout(() => setDebouncedUsername(trimmed), debounceMs)
     }
 
-    // Don't check if validation fails
-    if (!trimmed || validateUsername(trimmed)) {
-      setDebouncedUsername('')
-      return
-    }
-
-    const timer = setTimeout(() => setDebouncedUsername(trimmed), debounceMs)
-    return () => clearTimeout(timer)
+    return () => clearTimeout(timeoutRef.current)
   }, [username, currentUsername, debounceMs])
 
   const { data: isAvailable, isLoading: isChecking } = useQuery({
