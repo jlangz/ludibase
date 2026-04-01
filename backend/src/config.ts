@@ -5,6 +5,8 @@ export interface Config {
   serverPort: number
   twitchClientId: string
   twitchClientSecret: string
+  itadApiKey?: string
+  platPricesApiKey?: string
 }
 
 export function loadConfig(): Config {
@@ -25,5 +27,8 @@ export function loadConfig(): Config {
 
   const serverPort = parseInt(process.env.SERVER_PORT || '8080', 10)
 
-  return { databaseUrl, serverPort, twitchClientId, twitchClientSecret }
+  const itadApiKey = process.env.ITAD_API_KEY || undefined
+  const platPricesApiKey = process.env.PLAT_PRICES || undefined
+
+  return { databaseUrl, serverPort, twitchClientId, twitchClientSecret, itadApiKey, platPricesApiKey }
 }

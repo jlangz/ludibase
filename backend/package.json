@@ -11,7 +11,8 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "import:bulk": "tsx src/scripts/import-games.ts bulk",
-    "import:incremental": "tsx src/scripts/import-games.ts incremental"
+    "import:incremental": "tsx src/scripts/import-games.ts incremental",
+    "sync:subs": "tsx src/scripts/sync-subscriptions.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.9",
@@ -19,6 +20,7 @@
     "drizzle-orm": "^0.45.1",
     "hono": "^4.11.8",
     "node-cron": "^4.2.1",
+    "node-html-parser": "^7.1.0",
     "postgres": "^3.4.8"
   },
   "devDependencies": {

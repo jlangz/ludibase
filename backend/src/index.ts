@@ -6,8 +6,11 @@ import { createDb } from './db/index.js'
 import { healthRoutes } from './routes/health.js'
 import { gamesRoutes } from './routes/games.js'
 import { importRoutes } from './routes/import.js'
+import { subscriptionRoutes } from './routes/subscriptions.js'
 import { IgdbService } from './services/igdb.js'
 import { GameImporter } from './services/game-importer.js'
+import { SubscriptionSyncer } from './services/subscription-syncer.js'
+import { registerAllFetchers } from './services/register-fetchers.js'
 import { startScheduler } from './scheduler/index.js'
 
 const config = loadConfig()
@@ -29,13 +32,16 @@ const igdb = new IgdbService({
 })
 
 const importer = new GameImporter(db, igdb)
-const scheduler = startScheduler(importer)
+const syncer = new SubscriptionSyncer(db)
+registerAllFetchers(syncer, config, db)
+const scheduler = startScheduler(importer, syncer)
 
 const app = new Hono()
 app.use('*', cors())
 app.route('/', healthRoutes(db))
 app.route('/', gamesRoutes(db, igdb))
 app.route('/', importRoutes(db, importer))
+app.route('/', subscriptionRoutes(db, syncer))
 
 const server = serve(
   { fetch: app.fetch, port: config.serverPort },
