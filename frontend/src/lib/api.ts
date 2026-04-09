@@ -48,6 +48,32 @@ export async function getServiceGames(slug: string, page = 1, pageSize = 20): Pr
   return res.json()
 }
 
+export interface FilteredSearchParams {
+  q?: string
+  services?: string[]
+  page?: number
+  pageSize?: number
+}
+
+export interface FilteredSearchResult {
+  games: GameSearchResult[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export async function searchGamesFiltered(params: FilteredSearchParams): Promise<FilteredSearchResult> {
+  const qs = new URLSearchParams()
+  if (params.q) qs.set('q', params.q)
+  if (params.services && params.services.length > 0) qs.set('services', params.services.join(','))
+  if (params.page) qs.set('page', String(params.page))
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+
+  const res = await fetch(`${API_BASE}/games/search/filtered?${qs}`)
+  if (!res.ok) throw new Error('Search failed')
+  return res.json()
+}
+
 /**
  * Build an IGDB image URL from an image_id.
  * Sizes: thumb (90x128), cover_small (90x128), cover_big (264x374),

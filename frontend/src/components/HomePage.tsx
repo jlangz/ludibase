@@ -1,6 +1,6 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { useGameSearch } from '../hooks/useGameSearch'
 import {
   getPopularGames,
   getSubscriptionStats,
@@ -9,7 +9,6 @@ import {
   igdbImageUrl,
 } from '../lib/api'
 import { SUBSCRIPTION_SERVICES } from '../constants/gaming'
-import { GameModal } from './GameModal'
 import type { GameSearchResult } from '../types'
 
 const serviceLabels = Object.fromEntries(
@@ -17,47 +16,10 @@ const serviceLabels = Object.fromEntries(
 )
 
 export function HomePage() {
-  const [selectedGame, setSelectedGame] = useState<GameSearchResult | null>(null)
-  const search = useGameSearch()
-
-  // When search is active, show search results; otherwise show landing sections
-  const isSearching = search.query.length >= 2
-
   return (
     <div>
-      {/* Search bar — always visible */}
-      <div className="relative">
-        <input
-          type="text"
-          value={search.input}
-          onChange={(e) => search.setInput(e.target.value)}
-          placeholder="Search for a game..."
-          className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-3 text-gray-100 placeholder-gray-500 focus:border-blue-500 focus:outline-none"
-        />
-        {search.isLoading && (
-          <div className="absolute right-3 top-3.5 text-sm text-gray-500">Searching...</div>
-        )}
-      </div>
-
-      {/* Search results */}
-      {isSearching ? (
-        <SearchResults
-          results={search.results}
-          query={search.query}
-          isLoading={search.isLoading}
-          onSelectGame={setSelectedGame}
-        />
-      ) : (
-        <>
-          <PopularGamesSection onSelectGame={setSelectedGame} />
-          <BrowseByServiceSection onSelectGame={setSelectedGame} />
-        </>
-      )}
-
-      {/* Game detail modal */}
-      {selectedGame && (
-        <GameModal game={selectedGame} onClose={() => setSelectedGame(null)} />
-      )}
+      <PopularGamesSection />
+      <BrowseByServiceSection />
 
       <p className="mt-8 text-xs text-gray-600">
         Data provided by{' '}
@@ -69,47 +31,9 @@ export function HomePage() {
   )
 }
 
-/* ---------- Search results ---------- */
-
-function SearchResults({
-  results,
-  query,
-  isLoading,
-  onSelectGame,
-}: {
-  results: GameSearchResult[]
-  query: string
-  isLoading: boolean
-  onSelectGame: (game: GameSearchResult) => void
-}) {
-  const igdbIds = results.map((g) => g.igdbId)
-  const { data: subsMap = {} } = useQuery({
-    queryKey: ['subsCheck', igdbIds.join(',')],
-    queryFn: () => checkSubscriptions(igdbIds),
-    enabled: igdbIds.length > 0,
-  })
-
-  if (!isLoading && results.length === 0) {
-    return <p className="mt-4 text-gray-500">No results found for "{query}"</p>
-  }
-
-  return (
-    <div className="mt-4 space-y-2">
-      {results.map((game) => (
-        <GameRow
-          key={game.igdbId}
-          game={game}
-          services={subsMap[game.igdbId] ?? []}
-          onClick={() => onSelectGame(game)}
-        />
-      ))}
-    </div>
-  )
-}
-
 /* ---------- Popular games ---------- */
 
-function PopularGamesSection({ onSelectGame }: { onSelectGame: (g: GameSearchResult) => void }) {
+function PopularGamesSection() {
   const { data: games = [], isLoading } = useQuery({
     queryKey: ['popularGames'],
     queryFn: () => getPopularGames(12),
@@ -124,7 +48,7 @@ function PopularGamesSection({ onSelectGame }: { onSelectGame: (g: GameSearchRes
   })
 
   return (
-    <section className="mt-8">
+    <section>
       <h2 className="mb-4 text-xl font-bold">Popular Games</h2>
       {isLoading ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -139,7 +63,6 @@ function PopularGamesSection({ onSelectGame }: { onSelectGame: (g: GameSearchRes
               key={game.igdbId}
               game={game}
               services={subsMap[game.igdbId] ?? []}
-              onClick={() => onSelectGame(game)}
             />
           ))}
         </div>
@@ -150,7 +73,7 @@ function PopularGamesSection({ onSelectGame }: { onSelectGame: (g: GameSearchRes
 
 /* ---------- Browse by service ---------- */
 
-function BrowseByServiceSection({ onSelectGame }: { onSelectGame: (g: GameSearchResult) => void }) {
+function BrowseByServiceSection() {
   const [activeService, setActiveService] = useState<string | null>(null)
 
   const { data: stats = [] } = useQuery({
@@ -195,7 +118,6 @@ function BrowseByServiceSection({ onSelectGame }: { onSelectGame: (g: GameSearch
                 key={game.igdbId}
                 game={game}
                 services={[activeService]}
-                onClick={() => onSelectGame(game)}
               />
             ))}
           </div>
@@ -210,21 +132,19 @@ function BrowseByServiceSection({ onSelectGame }: { onSelectGame: (g: GameSearch
   )
 }
 
-/* ---------- Shared game components ---------- */
+/* ---------- Game tile ---------- */
 
 function GameTile({
   game,
   services,
-  onClick,
 }: {
   game: GameSearchResult
   services: string[]
-  onClick: () => void
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="group relative overflow-hidden rounded-lg border border-gray-800 bg-gray-900 text-left transition-colors hover:border-gray-600"
+    <Link
+      to={`/game/${game.igdbId}`}
+      className="group relative overflow-hidden rounded-lg border border-gray-800 bg-gray-900 transition-colors hover:border-gray-600"
     >
       {game.coverImageId ? (
         <img
@@ -276,71 +196,6 @@ function GameTile({
           </p>
         )}
       </div>
-    </button>
-  )
-}
-
-function GameRow({
-  game,
-  services,
-  onClick,
-}: {
-  game: GameSearchResult
-  services: string[]
-  onClick: () => void
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex w-full gap-4 rounded border border-gray-800 bg-gray-900 p-4 text-left transition-colors hover:border-gray-600"
-    >
-      {game.coverImageId ? (
-        <img
-          src={igdbImageUrl(game.coverImageId, 'cover_small')}
-          alt={game.title}
-          className="h-24 w-[68px] shrink-0 rounded object-cover"
-          loading="lazy"
-        />
-      ) : (
-        <div className="flex h-24 w-[68px] shrink-0 items-center justify-center rounded bg-gray-800 text-xs text-gray-600">
-          No image
-        </div>
-      )}
-
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold leading-tight">{game.title}</h3>
-          {game.firstReleaseDate && (
-            <span className="shrink-0 text-sm text-gray-500">
-              {new Date(game.firstReleaseDate).getFullYear()}
-            </span>
-          )}
-        </div>
-
-        {game.platforms.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1">
-            {game.platforms.map((p) => (
-              <span key={p} className="rounded bg-gray-800 px-1.5 py-0.5 text-xs text-gray-400">
-                {p}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {services.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {services.map((s) => (
-              <span key={s} className="rounded bg-blue-900/40 px-1.5 py-0.5 text-xs text-blue-300">
-                {serviceLabels[s] ?? s}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {game.summary && (
-          <p className="mt-1.5 line-clamp-2 text-sm text-gray-400">{game.summary}</p>
-        )}
-      </div>
-    </button>
+    </Link>
   )
 }

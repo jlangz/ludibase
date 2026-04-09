@@ -2,7 +2,36 @@ import { Hono } from 'hono'
 import { eq, sql } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import type { IgdbService } from '../services/igdb.js'
-import { games } from '../db/schema.js'
+import { games, gameSubscriptions } from '../db/schema.js'
+
+/**
+ * Subscription tier hierarchy — higher tiers include access to all lower tiers.
+ * E.g. a PS Plus Premium subscriber can play Extra and Essential games too.
+ *
+ * Xbox tiers are already handled at the data layer (our fetcher builds
+ * Ultimate = Standard + EA Play), but included here for completeness.
+ */
+const SERVICE_TIER_INCLUDES: Record<string, string[]> = {
+  'ps-plus-premium': ['ps-plus-extra', 'ps-plus-essential'],
+  'ps-plus-extra': ['ps-plus-essential'],
+  'gamepass-ultimate': ['gamepass-standard', 'gamepass-core'],
+  'gamepass-standard': ['gamepass-core'],
+  'ea-play-pro': ['ea-play'],
+  'ubisoft-plus-premium': ['ubisoft-plus'],
+  'nintendo-online-expansion': ['nintendo-online'],
+}
+
+/** Expand a list of service slugs to include all lower-tier services they encompass. */
+function expandServiceTiers(services: string[]): string[] {
+  const expanded = new Set(services)
+  for (const slug of services) {
+    const includes = SERVICE_TIER_INCLUDES[slug]
+    if (includes) {
+      for (const s of includes) expanded.add(s)
+    }
+  }
+  return [...expanded]
+}
 
 export function gamesRoutes(db: Database, igdb: IgdbService) {
   const app = new Hono()
@@ -55,6 +84,94 @@ export function gamesRoutes(db: Database, igdb: IgdbService) {
       firstReleaseDate: r.firstReleaseDate?.toISOString() ?? null,
       similarity: undefined,
     })))
+  })
+
+  /**
+   * GET /games/search/filtered?q=witcher&services=gamepass-ultimate,ps-plus-extra&page=1&pageSize=20
+   * Searches games with optional subscription service filtering.
+   * When services are provided, only returns games available on those services.
+   * Results sorted by similarity (best match first), then alphabetically.
+   */
+  app.get('/games/search/filtered', async (c) => {
+    const query = c.req.query('q')?.trim() ?? ''
+    const servicesParam = c.req.query('services')?.trim() ?? ''
+    const page = Math.max(parseInt(c.req.query('page') ?? '1', 10) || 1, 1)
+    const pageSize = Math.min(parseInt(c.req.query('pageSize') ?? '20', 10) || 20, 100)
+    const offset = (page - 1) * pageSize
+
+    const serviceFilters = servicesParam
+      ? expandServiceTiers(servicesParam.split(',').map((s) => s.trim()).filter(Boolean))
+      : []
+
+    // Build WHERE conditions
+    const conditions = []
+
+    if (query.length >= 2) {
+      conditions.push(sql`(${games.title} % ${query} OR ${games.title} ILIKE ${'%' + query + '%'})`)
+    }
+
+    if (serviceFilters.length > 0) {
+      conditions.push(
+        sql`${games.id} IN (
+          SELECT ${gameSubscriptions.gameId} FROM ${gameSubscriptions}
+          WHERE ${gameSubscriptions.removedAt} IS NULL
+          AND ${gameSubscriptions.serviceSlug} IN (${sql.join(serviceFilters.map((s) => sql`${s}`), sql`, `)})
+        )`
+      )
+    }
+
+    // If no query and no filters, require at least one
+    if (conditions.length === 0) {
+      return c.json({ games: [], total: 0, page, pageSize })
+    }
+
+    const where = conditions.length === 1 ? conditions[0] : sql`${sql.join(conditions, sql` AND `)}`
+
+    // Count total
+    const [countResult] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(games)
+      .where(where)
+
+    const total = Number(countResult?.count ?? 0)
+
+    // Order: if searching, sort by similarity then alpha. Otherwise just alpha.
+    const orderBy = query.length >= 2
+      ? sql`similarity(${games.title}, ${query}) DESC, ${games.title} ASC`
+      : sql`${games.title} ASC`
+
+    const results = await db
+      .select({
+        igdbId: games.igdbId,
+        title: games.title,
+        slug: games.slug,
+        summary: games.summary,
+        coverImageId: games.coverImageId,
+        platforms: games.platforms,
+        genres: games.genres,
+        category: games.category,
+        developer: games.developer,
+        publisher: games.publisher,
+        aggregatedRating: games.aggregatedRating,
+        ratingCount: games.ratingCount,
+        firstReleaseDate: games.firstReleaseDate,
+        igdbUrl: games.igdbUrl,
+      })
+      .from(games)
+      .where(where)
+      .orderBy(orderBy)
+      .limit(pageSize)
+      .offset(offset)
+
+    return c.json({
+      games: results.map((r) => ({
+        ...r,
+        firstReleaseDate: r.firstReleaseDate?.toISOString() ?? null,
+      })),
+      total,
+      page,
+      pageSize,
+    })
   })
 
   /**

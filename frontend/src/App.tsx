@@ -5,6 +5,8 @@ import { LoginForm } from './components/LoginForm'
 import { SignupForm } from './components/SignupForm'
 import { ProfileEditor } from './components/ProfileEditor'
 import { HomePage } from './components/HomePage'
+import { GamePage } from './components/GamePage'
+import { SearchPage } from './components/SearchPage'
 import { ResetPasswordForm } from './components/ResetPasswordForm'
 import { useAuth } from './hooks/useAuth'
 
@@ -20,6 +22,8 @@ function AppContent() {
         ) : (
           <Routes>
             <Route path="/" element={<HomePage />} />
+            <Route path="/game/:igdbId" element={<GamePage />} />
+            <Route path="/search" element={<SearchPage />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/signup" element={<SignupForm />} />
             <Route path="/profile" element={<ProfileEditor />} />
