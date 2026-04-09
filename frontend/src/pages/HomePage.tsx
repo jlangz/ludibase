@@ -7,6 +7,7 @@ import {
   getServiceGames,
   checkSubscriptions,
   igdbImageUrl,
+  getNews,
 } from '../lib/api'
 import { SUBSCRIPTION_SERVICES, SERVICE_FAMILIES } from '../constants/gaming'
 import type { GameSearchResult } from '../types'
@@ -27,6 +28,7 @@ export function HomePage() {
     <div>
       <PopularGamesSection />
       <BrowseByServiceSection />
+      <NewsSection />
 
       <p className="mt-8 text-xs text-gray-600">
         Data provided by{' '}
@@ -147,6 +149,78 @@ function BrowseByServiceSection() {
       )}
     </section>
   )
+}
+
+/* ---------- News ---------- */
+
+function NewsSection() {
+  const { data: news = [], isLoading } = useQuery({
+    queryKey: ['news'],
+    queryFn: () => getNews(8),
+    staleTime: 10 * 60_000,
+  })
+
+  if (isLoading) {
+    return (
+      <section className="mt-10">
+        <h2 className="mb-4 text-xl font-bold">Gaming News</h2>
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-20 animate-pulse rounded-lg bg-gray-800" />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  if (news.length === 0) return null
+
+  return (
+    <section className="mt-10">
+      <h2 className="mb-4 text-xl font-bold">Gaming News</h2>
+      <div className="space-y-3">
+        {news.map((item, i) => (
+          <a
+            key={`${item.link}-${i}`}
+            href={item.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex gap-4 rounded-lg border border-gray-800 bg-gray-900 p-3 transition-colors hover:border-gray-600"
+          >
+            {item.imageUrl && (
+              <img
+                src={item.imageUrl}
+                alt=""
+                className="h-20 w-32 shrink-0 rounded object-cover"
+                loading="lazy"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="font-medium leading-tight line-clamp-2">{item.title}</p>
+              {item.description && (
+                <p className="mt-1 text-sm text-gray-400 line-clamp-2">{item.description}</p>
+              )}
+              <div className="mt-1.5 flex items-center gap-2 text-xs text-gray-500">
+                <span>{item.source}</span>
+                <span>·</span>
+                <span>{formatTimeAgo(item.pubDate)}</span>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60_000)
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
 }
 
 /* ---------- Game tile ---------- */

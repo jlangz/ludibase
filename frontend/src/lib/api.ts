@@ -85,6 +85,22 @@ export async function getServiceFamily(params: {
   return res.json()
 }
 
+export interface NewsItem {
+  title: string
+  link: string
+  description: string
+  pubDate: string
+  source: string
+  imageUrl: string | null
+}
+
+export async function getNews(limit = 20): Promise<NewsItem[]> {
+  const res = await fetch(`${API_BASE}/news?limit=${limit}`)
+  if (!res.ok) throw new Error('Failed to fetch news')
+  const data = await res.json()
+  return data.items
+}
+
 export interface FilteredSearchParams {
   q?: string
   services?: string[]

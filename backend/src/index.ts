@@ -9,6 +9,7 @@ import { importRoutes } from './routes/import.js'
 import { subscriptionRoutes } from './routes/subscriptions.js'
 import { collectionRoutes } from './routes/collection.js'
 import { steamRoutes } from './routes/steam.js'
+import { newsRoutes } from './routes/news.js'
 import { IgdbService } from './services/igdb.js'
 import { GameImporter } from './services/game-importer.js'
 import { SubscriptionSyncer } from './services/subscription-syncer.js'
@@ -44,6 +45,7 @@ app.route('/', healthRoutes(db))
 app.route('/', gamesRoutes(db, igdb))
 app.route('/', importRoutes(db, importer))
 app.route('/', subscriptionRoutes(db, syncer))
+app.route('/', newsRoutes())
 
 // Collection + Steam (require SUPABASE_URL for JWT verification)
 if (config.supabaseUrl) {
