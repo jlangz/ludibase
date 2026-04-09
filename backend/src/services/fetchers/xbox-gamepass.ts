@@ -1,16 +1,15 @@
 export interface XboxGame {
   title: string
   productId: string
+  /** Which Game Pass platforms this game is available on */
+  xboxPlatforms: ('pc' | 'console')[]
 }
 
 // Sigl IDs for different Game Pass collections
-// These are Microsoft's internal collection identifiers
 const SIGLS = {
-  // Game Pass PC catalog
+  core: '34031711-5a70-4196-bab7-45757dc2294e',
   pc: 'fdd9e2a7-0fee-49f6-ad69-4354098401ff',
-  // Game Pass Console catalog
   console: '29a81209-df6f-41fd-a528-2ae6b91f719c',
-  // EA Play via Game Pass
   eaPlay: 'b8900d09-a491-44cc-916e-32b5acae621b',
 } as const
 
@@ -41,16 +40,14 @@ async function fetchSiglProductIds(siglId: string, market = 'US', language = 'en
 
   const entries = (await res.json()) as SiglEntry[]
 
-  // First entry is the collection metadata, rest are product IDs
   return entries
     .filter((e) => e.id && e.id !== siglId)
     .map((e) => e.id)
 }
 
-async function fetchProductDetails(productIds: string[], market = 'US', language = 'en-US'): Promise<XboxGame[]> {
-  const games: XboxGame[] = []
+async function fetchProductDetails(productIds: string[], market = 'US', language = 'en-US'): Promise<Map<string, string>> {
+  const titleMap = new Map<string, string>() // productId -> title
 
-  // displaycatalog accepts up to ~20 IDs per request
   const chunkSize = 20
   for (let i = 0; i < productIds.length; i += chunkSize) {
     const chunk = productIds.slice(i, i + chunkSize)
@@ -67,45 +64,88 @@ async function fetchProductDetails(productIds: string[], market = 'US', language
     for (const product of data.Products ?? []) {
       const title = product.LocalizedProperties?.[0]?.ProductTitle
       if (title) {
-        games.push({ title: title.trim(), productId: product.ProductId })
+        titleMap.set(product.ProductId, title.trim())
       }
     }
 
-    // Small delay between batches
     if (i + chunkSize < productIds.length) {
       await new Promise((r) => setTimeout(r, 200))
     }
   }
 
-  return games
+  return titleMap
 }
 
-export async function fetchGamePassCatalog(): Promise<{ pc: XboxGame[]; console: XboxGame[]; eaPlay: XboxGame[] }> {
-  // Fetch all three catalogs in parallel
-  const [pcIds, consoleIds, eaPlayIds] = await Promise.all([
+export interface GamePassCatalog {
+  core: XboxGame[]
+  standard: XboxGame[]
+  ultimate: XboxGame[]
+  eaPlay: XboxGame[]
+  /** Raw sigl membership for debugging/analysis */
+  raw: {
+    coreIds: Set<string>
+    pcIds: Set<string>
+    consoleIds: Set<string>
+    eaPlayIds: Set<string>
+  }
+}
+
+export async function fetchGamePassCatalog(): Promise<GamePassCatalog> {
+  // Fetch all four sigls in parallel
+  const [coreIdList, pcIdList, consoleIdList, eaPlayIdList] = await Promise.all([
+    fetchSiglProductIds(SIGLS.core),
     fetchSiglProductIds(SIGLS.pc),
     fetchSiglProductIds(SIGLS.console),
     fetchSiglProductIds(SIGLS.eaPlay),
   ])
 
-  console.log(`[Xbox] Found product IDs — PC: ${pcIds.length}, Console: ${consoleIds.length}, EA Play: ${eaPlayIds.length}`)
+  const coreIds = new Set(coreIdList)
+  const pcIds = new Set(pcIdList)
+  const consoleIds = new Set(consoleIdList)
+  const eaPlayIds = new Set(eaPlayIdList)
 
-  // Fetch details for all unique product IDs
-  const allIds = [...new Set([...pcIds, ...consoleIds, ...eaPlayIds])]
-  const allGames = await fetchProductDetails(allIds)
-  const gameMap = new Map(allGames.map((g) => [g.productId, g]))
+  console.log(`[Xbox] Found product IDs — Core: ${coreIds.size}, PC: ${pcIds.size}, Console: ${consoleIds.size}, EA Play: ${eaPlayIds.size}`)
 
-  const resolve = (ids: string[]): XboxGame[] =>
-    ids.map((id) => gameMap.get(id)).filter((g): g is XboxGame => g !== undefined)
+  // Fetch titles for all unique product IDs
+  const allIds = [...new Set([...coreIds, ...pcIds, ...consoleIds, ...eaPlayIds])]
+  const titleMap = await fetchProductDetails(allIds)
+
+  // Helper: build XboxGame with platform info derived from sigl membership
+  function buildGame(productId: string): XboxGame | null {
+    const title = titleMap.get(productId)
+    if (!title) return null
+    const platforms: ('pc' | 'console')[] = []
+    if (pcIds.has(productId)) platforms.push('pc')
+    if (consoleIds.has(productId)) platforms.push('console')
+    // Core and EA Play games: derive from PC/Console membership, fallback to both
+    if (platforms.length === 0) {
+      // Not in PC or Console sigl — check if it might be console-only (Core games)
+      platforms.push('console')
+    }
+    return { title, productId, xboxPlatforms: platforms }
+  }
+
+  // Core: its own sigl
+  const core = [...coreIds].map(buildGame).filter((g): g is XboxGame => g !== null)
+
+  // Standard: PC + Console combined
+  const standardIds = new Set([...pcIds, ...consoleIds])
+  const standard = [...standardIds].map(buildGame).filter((g): g is XboxGame => g !== null)
+
+  // Ultimate: Standard + EA Play
+  const ultimateIds = new Set([...standardIds, ...eaPlayIds])
+  const ultimate = [...ultimateIds].map(buildGame).filter((g): g is XboxGame => g !== null)
+
+  // EA Play: its own sigl (for separate ea-play service tracking)
+  const eaPlay = [...eaPlayIds].map(buildGame).filter((g): g is XboxGame => g !== null)
 
   return {
-    pc: resolve(pcIds),
-    console: resolve(consoleIds),
-    eaPlay: resolve(eaPlayIds),
+    core,
+    standard,
+    ultimate,
+    eaPlay,
+    raw: { coreIds, pcIds, consoleIds, eaPlayIds },
   }
 }
 
-// Game Pass Standard = PC + Console combined
-// Game Pass Ultimate = Standard + EA Play + cloud
-// Game Pass Core = separate smaller catalog (Gold replacement), not tracked via sigls yet
 export const XBOX_SOURCE = 'xbox-catalog'

@@ -5,7 +5,7 @@ import { useUsernameCheck, validateUsername } from '../hooks/useUsernameCheck'
 import { useAuth } from '../hooks/useAuth'
 import { AvatarUploader } from '../components/AvatarUploader'
 import { MultiSelectChips } from '../components/MultiSelectChips'
-import { PLATFORMS, SUBSCRIPTION_SERVICES } from '../constants/gaming'
+import { PLATFORMS, SUBSCRIPTION_SERVICES, expandServiceTiers } from '../constants/gaming'
 import { useSteamConnection } from '../hooks/useSteamConnection'
 import { useSearchParams } from 'react-router-dom'
 
@@ -219,7 +219,7 @@ export function ProfileEditor() {
             <MultiSelectChips
               options={SUBSCRIPTION_SERVICES}
               selected={form.subscriptions}
-              onChange={(subscriptions) => updateField('subscriptions', subscriptions)}
+              onChange={(subscriptions) => updateField('subscriptions', expandServiceTiers(subscriptions))}
             />
           </div>
         </section>

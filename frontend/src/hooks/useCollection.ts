@@ -1,14 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
-import { getCollection, addToCollection, removeFromCollection, checkCollection } from '../lib/api'
+import { getCollection, addToCollection, removeFromCollection, checkCollection, type CollectionListParams } from '../lib/api'
 
-export function useCollection(page = 1, storefront?: string) {
+export function useCollection(params: CollectionListParams = {}) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const query = useQuery({
-    queryKey: ['collection', user?.id, page, storefront],
-    queryFn: () => getCollection(page, 20, storefront),
+    queryKey: ['collection', user?.id, params],
+    queryFn: () => getCollection({ pageSize: 20, ...params }),
     enabled: !!user,
     staleTime: 60_000,
   })

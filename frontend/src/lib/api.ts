@@ -83,7 +83,16 @@ export async function searchGamesFiltered(params: FilteredSearchParams): Promise
 
 // --- Collection APIs (authenticated) ---
 
-export async function getCollection(page = 1, pageSize = 20, storefront?: string): Promise<{
+export interface CollectionListParams {
+  page?: number
+  pageSize?: number
+  storefront?: string
+  q?: string
+  sort?: string
+  platform?: string
+}
+
+export async function getCollection(params: CollectionListParams = {}): Promise<{
   games: CollectionEntry[]
   total: number
   page: number
@@ -91,8 +100,13 @@ export async function getCollection(page = 1, pageSize = 20, storefront?: string
   storefronts: string[]
 }> {
   const headers = await authHeaders()
-  const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
-  if (storefront) qs.set('storefront', storefront)
+  const qs = new URLSearchParams()
+  if (params.page) qs.set('page', String(params.page))
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+  if (params.storefront) qs.set('storefront', params.storefront)
+  if (params.q) qs.set('q', params.q)
+  if (params.sort) qs.set('sort', params.sort)
+  if (params.platform) qs.set('platform', params.platform)
   const res = await fetch(`${API_BASE}/collection?${qs}`, { headers })
   if (!res.ok) throw new Error('Failed to fetch collection')
   return res.json()
@@ -123,6 +137,59 @@ export async function checkCollection(igdbIds: number[]): Promise<Record<number,
   const headers = await authHeaders()
   const res = await fetch(`${API_BASE}/collection/check?igdbIds=${igdbIds.join(',')}`, { headers })
   if (!res.ok) throw new Error('Failed to check collection')
+  return res.json()
+}
+
+export async function getSubscriptionGames(params: {
+  service?: string
+  overlap?: boolean
+  page?: number
+  pageSize?: number
+  q?: string
+  sort?: string
+  platform?: string
+}): Promise<{
+  games: GameSearchResult[]
+  total: number
+  page: number
+  pageSize: number
+  services: string[]
+}> {
+  const headers = await authHeaders()
+  const qs = new URLSearchParams()
+  if (params.service) qs.set('service', params.service)
+  if (params.overlap) qs.set('overlap', 'true')
+  if (params.page) qs.set('page', String(params.page))
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+  if (params.q) qs.set('q', params.q)
+  if (params.sort) qs.set('sort', params.sort)
+  if (params.platform) qs.set('platform', params.platform)
+  const res = await fetch(`${API_BASE}/collection/subscriptions?${qs}`, { headers })
+  if (!res.ok) throw new Error('Failed to fetch subscription games')
+  return res.json()
+}
+
+export async function getAllMyGames(params: {
+  page?: number
+  pageSize?: number
+  q?: string
+  sort?: string
+  platform?: string
+}): Promise<{
+  games: GameSearchResult[]
+  total: number
+  page: number
+  pageSize: number
+}> {
+  const headers = await authHeaders()
+  const qs = new URLSearchParams()
+  if (params.page) qs.set('page', String(params.page))
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+  if (params.q) qs.set('q', params.q)
+  if (params.sort) qs.set('sort', params.sort)
+  if (params.platform) qs.set('platform', params.platform)
+  const res = await fetch(`${API_BASE}/collection/all?${qs}`, { headers })
+  if (!res.ok) throw new Error('Failed to fetch all games')
   return res.json()
 }
 

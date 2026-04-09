@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { searchGamesFiltered, checkSubscriptions, igdbImageUrl } from '../lib/api'
 import { useProfile } from '../hooks/useProfile'
-import { SUBSCRIPTION_SERVICES } from '../constants/gaming'
+import { SUBSCRIPTION_SERVICES, expandServiceTiers } from '../constants/gaming'
 import type { GameSearchResult } from '../types'
 
 const serviceLabels = Object.fromEntries(
@@ -59,15 +59,16 @@ export function SearchPage() {
   })
 
   function toggleService(slug: string) {
-    setSelectedServices((prev) =>
-      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
-    )
+    setSelectedServices((prev) => {
+      const next = prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]
+      return expandServiceTiers(next)
+    })
     setPage(1)
   }
 
   function applyMyServices() {
     if (profile?.subscriptions && profile.subscriptions.length > 0) {
-      setSelectedServices(profile.subscriptions)
+      setSelectedServices(expandServiceTiers(profile.subscriptions))
       setPage(1)
     }
   }

@@ -32,6 +32,46 @@ export const SUBSCRIPTION_SERVICES = [
   { value: 'amazon-luna', label: 'Amazon Luna' },
 ] as const
 
+/**
+ * Subscription tier hierarchy — higher tiers include all lower tiers.
+ * Used for: auto-selecting lower tiers in profile, collapsing tabs in collection page,
+ * and expanding filters in search.
+ */
+export const SERVICE_TIER_INCLUDES: Record<string, string[]> = {
+  'ps-plus-premium': ['ps-plus-extra', 'ps-plus-essential'],
+  'ps-plus-extra': ['ps-plus-essential'],
+  'gamepass-ultimate': ['gamepass-standard', 'gamepass-core'],
+  'gamepass-standard': ['gamepass-core'],
+  'ea-play-pro': ['ea-play'],
+  'ubisoft-plus-premium': ['ubisoft-plus'],
+  'nintendo-online-expansion': ['nintendo-online'],
+}
+
+/** Expand a list of service slugs to include all lower-tier services. */
+export function expandServiceTiers(services: string[]): string[] {
+  const expanded = new Set(services)
+  for (const slug of services) {
+    const includes = SERVICE_TIER_INCLUDES[slug]
+    if (includes) {
+      for (const s of includes) expanded.add(s)
+    }
+  }
+  return [...expanded]
+}
+
+/** Collapse a list of service slugs to only the highest tier per family. */
+export function collapseToHighestTiers(services: string[]): string[] {
+  const set = new Set(services)
+  // Remove any service that is included by a higher tier also in the set
+  for (const slug of services) {
+    const includes = SERVICE_TIER_INCLUDES[slug]
+    if (includes) {
+      for (const lower of includes) set.delete(lower)
+    }
+  }
+  return [...set]
+}
+
 /** Digital storefronts where games can be purchased/owned */
 export const STOREFRONTS = [
   { value: 'steam', label: 'Steam' },

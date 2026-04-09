@@ -26,48 +26,19 @@ export function registerAllFetchers(syncer: SubscriptionSyncer, config: Config, 
     }]
   })
 
-  // Xbox Game Pass — public Microsoft API
+  // Xbox Game Pass + EA Play — public Microsoft API, single fetch for all tiers
   syncer.registerFetcher('xbox', async (): Promise<FetcherResult[]> => {
     const catalog = await fetchGamePassCatalog()
 
-    // PC + Console combined = Game Pass Standard
-    // PC + Console + EA Play = Game Pass Ultimate
-    const allStandardIds = new Set([
-      ...catalog.pc.map((g) => g.productId),
-      ...catalog.console.map((g) => g.productId),
-    ])
-    const allUltimateIds = new Set([
-      ...allStandardIds,
-      ...catalog.eaPlay.map((g) => g.productId),
-    ])
-
-    const allGames = new Map<string, string>() // productId -> title
-    for (const g of [...catalog.pc, ...catalog.console, ...catalog.eaPlay]) {
-      allGames.set(g.productId, g.title)
-    }
+    const toFetcherGames = (list: typeof catalog.core) =>
+      list.map((g) => ({ title: g.title, externalId: g.productId }))
 
     return [
-      {
-        serviceSlug: 'gamepass-standard',
-        source: XBOX_SOURCE,
-        games: [...allStandardIds].map((id) => ({ title: allGames.get(id)!, externalId: id })),
-      },
-      {
-        serviceSlug: 'gamepass-ultimate',
-        source: XBOX_SOURCE,
-        games: [...allUltimateIds].map((id) => ({ title: allGames.get(id)!, externalId: id })),
-      },
+      { serviceSlug: 'gamepass-core', source: XBOX_SOURCE, games: toFetcherGames(catalog.core) },
+      { serviceSlug: 'gamepass-standard', source: XBOX_SOURCE, games: toFetcherGames(catalog.standard) },
+      { serviceSlug: 'gamepass-ultimate', source: XBOX_SOURCE, games: toFetcherGames(catalog.ultimate) },
+      { serviceSlug: 'ea-play', source: XBOX_SOURCE, games: toFetcherGames(catalog.eaPlay) },
     ]
-  })
-
-  // EA Play — sourced from Xbox Game Pass EA Play sigl (authoritative)
-  syncer.registerFetcher('ea-play', async (): Promise<FetcherResult[]> => {
-    const catalog = await fetchGamePassCatalog()
-    return [{
-      serviceSlug: 'ea-play',
-      source: XBOX_SOURCE,
-      games: catalog.eaPlay.map((g) => ({ title: g.title, externalId: g.productId })),
-    }]
   })
 
   // Ubisoft+ — use ITAD to check Ubisoft-published games for subscription status
