@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { CollectionButton } from '../components/CollectionButton'
 import { useQuery } from '@tanstack/react-query'
-import { igdbImageUrl, getGameSubscriptions } from '../lib/api'
+import { igdbImageUrl, getGameSubscriptions, getGamePrices } from '../lib/api'
 import { SUBSCRIPTION_SERVICES } from '../constants/gaming'
 import type { GameSearchResult } from '../types'
 
@@ -31,6 +31,13 @@ export function GamePage() {
     queryKey: ['gameSubscriptions', id],
     queryFn: () => getGameSubscriptions(id),
     enabled: !isNaN(id) && id > 0,
+  })
+
+  const { data: prices = [] } = useQuery({
+    queryKey: ['gamePrices', id],
+    queryFn: () => getGamePrices(id),
+    enabled: !isNaN(id) && id > 0,
+    staleTime: 60 * 60_000, // 1 hour
   })
 
   if (isLoading) {
@@ -151,6 +158,40 @@ export function GamePage() {
                 >
                   {serviceLabels[sub.service] ?? sub.service}
                 </span>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* Prices */}
+        {prices.length > 0 && (
+          <Section title="Prices">
+            <div className="space-y-2">
+              {prices.map((p) => (
+                <a
+                  key={p.store}
+                  href={p.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between rounded bg-gray-800 px-3 py-2 transition-colors hover:bg-gray-700"
+                >
+                  <span className="text-sm font-medium">{p.storeName}</span>
+                  <div className="flex items-center gap-2">
+                    {p.discount > 0 && (
+                      <span className="rounded bg-green-900/50 px-1.5 py-0.5 text-xs font-semibold text-green-400">
+                        -{p.discount}%
+                      </span>
+                    )}
+                    {p.discount > 0 && p.originalPrice != null && (
+                      <span className="text-xs text-gray-500 line-through">
+                        ${p.originalPrice.toFixed(2)}
+                      </span>
+                    )}
+                    <span className="text-sm font-bold">
+                      {p.price === 0 ? 'Free' : p.price != null ? `$${p.price.toFixed(2)}` : '—'}
+                    </span>
+                  </div>
+                </a>
               ))}
             </div>
           </Section>

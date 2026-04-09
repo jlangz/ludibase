@@ -89,6 +89,16 @@ export const userGameCollection = pgTable('user_game_collection', {
   index('user_game_collection_user_id_idx').on(table.userId),
 ])
 
+export const gameStoreIds = pgTable('game_store_ids', {
+  id: serial('id').primaryKey(),
+  gameId: integer('game_id').notNull().references(() => games.id),
+  store: text('store').notNull(),
+  storeId: text('store_id').notNull(),
+}, (table) => [
+  uniqueIndex('game_store_ids_game_store_idx').on(table.gameId, table.store),
+  index('game_store_ids_store_idx').on(table.store),
+])
+
 export const importRuns = pgTable('import_runs', {
   id: serial('id').primaryKey(),
   type: text('type').notNull(),

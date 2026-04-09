@@ -12,7 +12,8 @@
     "db:studio": "drizzle-kit studio",
     "import:bulk": "tsx src/scripts/import-games.ts bulk",
     "import:incremental": "tsx src/scripts/import-games.ts incremental",
-    "sync:subs": "tsx src/scripts/sync-subscriptions.ts"
+    "sync:subs": "tsx src/scripts/sync-subscriptions.ts",
+    "bootstrap:store-ids": "tsx src/scripts/bootstrap-store-ids.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.9",

@@ -3,6 +3,8 @@ import { eq, sql } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import type { IgdbService } from '../services/igdb.js'
 import { games, gameSubscriptions } from '../db/schema.js'
+import { PricingService } from '../services/pricing.js'
+import { buildAffiliateUrl } from '../services/affiliate.js'
 
 /**
  * Subscription tier hierarchy — higher tiers include access to all lower tiers.
@@ -35,6 +37,7 @@ function expandServiceTiers(services: string[]): string[] {
 
 export function gamesRoutes(db: Database, igdb: IgdbService) {
   const app = new Hono()
+  const pricing = new PricingService(db)
 
   /**
    * GET /games/search?q=witcher&limit=20
@@ -281,6 +284,26 @@ export function gamesRoutes(db: Database, igdb: IgdbService) {
     }).onConflictDoNothing()
 
     return c.json({ ...game, cached: false })
+  })
+
+  /**
+   * GET /games/:igdbId/prices
+   * Returns current prices for a game across available stores.
+   */
+  app.get('/games/:igdbId/prices', async (c) => {
+    const igdbId = parseInt(c.req.param('igdbId'), 10)
+    if (isNaN(igdbId) || igdbId <= 0) {
+      return c.json({ error: 'Invalid IGDB ID' }, 400)
+    }
+
+    const prices = await pricing.getGamePrices(igdbId)
+
+    return c.json({
+      prices: prices.map((p) => ({
+        ...p,
+        url: buildAffiliateUrl(p.store, p.url),
+      })),
+    })
   })
 
   return app

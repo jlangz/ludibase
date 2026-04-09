@@ -101,6 +101,23 @@ export async function getNews(limit = 20): Promise<NewsItem[]> {
   return data.items
 }
 
+export interface GamePrice {
+  store: string
+  storeName: string
+  price: number | null
+  originalPrice: number | null
+  discount: number
+  currency: string
+  url: string
+}
+
+export async function getGamePrices(igdbId: number): Promise<GamePrice[]> {
+  const res = await fetch(`${API_BASE}/games/${igdbId}/prices`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.prices
+}
+
 export interface FilteredSearchParams {
   q?: string
   services?: string[]
