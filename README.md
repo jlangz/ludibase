@@ -1,60 +1,61 @@
-# Game Subscription Tracker
+# LudiBase
 
-Track and compare game streaming/subscription services — Game Pass, EA Play, PS Plus, Ubisoft+, and more.
+Track game subscription services, compare prices, and manage your game collection.
 
 ## Structure
 
 - `frontend/` — React + TypeScript + Vite + Tailwind + TanStack Query
 - `backend/` — TypeScript + Hono + Drizzle ORM (REST API + data pipeline)
 
-## Architecture
+## Features
 
-The app uses a hybrid approach:
+- **Game Database** — 186K games imported from IGDB with search, ratings, and metadata
+- **Subscription Tracking** — Game Pass, PS Plus, GeForce NOW, EA Play, Ubisoft+, Nintendo Switch Online
+- **Price Comparison** — Live prices from Steam, Xbox, and GOG with affiliate link support
+- **User Collections** — Manual game tracking + Steam library import
+- **Service Pages** — Dedicated browsing for each subscription service with tier comparisons
+- **Gaming News** — Aggregated RSS feeds from major gaming outlets
 
-- **Frontend → Supabase direct**: Auth (login/signup/session), user profiles, avatar uploads. Simple reads/writes protected by Row Level Security.
-- **Frontend → Hono backend API** (`/api/*`): Game search (trigram similarity on local Postgres), game detail lookups, import management, and future complex queries (services, plans, comparisons).
-- **Backend only**: IGDB integration, game importer (bulk + incremental), daily cron jobs.
+## Environment
 
-**Rule of thumb:** Single-table CRUD with RLS goes through Supabase directly. Joins, business logic, external APIs, or anything that will grow in complexity goes through the backend API.
+All environment variables live in a single `.env` file at the project root.
 
-## Game Data Pipeline
+Required:
+- `DATABASE_URL` — Supabase Postgres connection string
+- `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` — for IGDB API
+- `SUPABASE_URL` — for JWT verification
+- `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY` — for frontend auth
 
-The backend imports games from IGDB into a local Postgres table (~186K games, ~107 MB). This powers instant search via trigram similarity instead of hitting the IGDB API on every query.
-
-```bash
-cd backend
-pnpm import:bulk              # Full import (~186K games, ~9 min)
-pnpm import:incremental       # Only new/updated games since last import
-pnpm import:bulk -- --resume 45000   # Resume a failed bulk import from offset
-```
-
-A daily cron job (4:00 AM UTC) runs incremental imports automatically when the backend is running.
+Optional:
+- `STEAM_API_KEY` — Steam library import
+- `ITAD_API_KEY` — Ubisoft+ subscription data
+- `PLAT_PRICES` — PlatPrices API
+- `AFFILIATE_GOG`, `AFFILIATE_XBOX`, etc. — affiliate tracking codes
 
 ## Development
 
 ```bash
-make install          # Install all dependencies (frontend + backend)
-make dev-frontend     # Start Vite dev server (http://localhost:5173)
-make dev-backend      # Start Hono dev server (http://localhost:8080)
+cd backend && pnpm install && pnpm dev     # Backend on :8080
+cd frontend && pnpm install && pnpm dev    # Frontend on :5173
 ```
+
+## Data Pipeline
+
+```bash
+cd backend
+pnpm import:bulk              # Import all games from IGDB
+pnpm import:incremental       # Import new/updated games
+pnpm sync:subs                # Sync subscription service catalogs
+pnpm sync:subs geforce-now    # Sync single service
+pnpm bootstrap:store-ids      # Populate store ID mappings for pricing
+```
+
+Daily cron jobs run automatically: game import at 4:00 AM UTC, subscription sync at 5:00 AM UTC.
 
 ## Database
 
-Drizzle schema and migrations live in `backend/`. Run from project root:
-
 ```bash
-make db-push          # Push schema changes to Supabase
-make db-generate      # Generate migration files
-make db-migrate       # Run pending migrations
-make db-studio        # Open Drizzle Studio (DB browser)
+cd backend
+pnpm db:push      # Push schema changes
+pnpm db:studio    # Open Drizzle Studio
 ```
-
-## Setup
-
-1. Copy environment files:
-   - `cp frontend/.env.local.example frontend/.env.local`
-   - `cp backend/.env.example backend/.env`
-2. Fill in your Supabase credentials (project URL, anon key, database URL)
-3. Add IGDB credentials to `backend/.env` (`IGDB_CLIENT_ID`, `IGDB_CLIENT_SECRET`)
-4. Run `make install` then start both dev servers
-5. Run `pnpm import:bulk` from `backend/` to populate the games catalog

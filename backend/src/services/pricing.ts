@@ -51,10 +51,21 @@ export class PricingService {
       .from(gameStoreIds)
       .where(eq(gameStoreIds.gameId, game.id))
 
-    if (storeRows.length === 0) return []
+    // Get the game title for stores that search by name (GOG)
+    const [gameRow] = await this.db
+      .select({ title: games.title })
+      .from(games)
+      .where(eq(games.id, game.id))
+      .limit(1)
 
-    // Fetch prices from all stores in parallel
-    const pricePromises = storeRows.map((row) => this.fetchPrice(row.store, row.storeId))
+    // Fetch prices from mapped stores + title-search stores in parallel
+    const pricePromises: Promise<GamePrice | null>[] = storeRows.map((row) => this.fetchPrice(row.store, row.storeId))
+
+    // Always search GOG by title (no pre-mapped ID needed)
+    if (gameRow?.title) {
+      pricePromises.push(fetchGogPrice(gameRow.title))
+    }
+
     const results = await Promise.all(pricePromises)
     const prices = results.filter((p): p is GamePrice => p !== null)
 
@@ -159,4 +170,49 @@ async function fetchXboxPrice(productId: string): Promise<GamePrice | null> {
   }
 
   return null
+}
+
+async function fetchGogPrice(title: string): Promise<GamePrice | null> {
+  const res = await fetch(
+    `https://catalog.gog.com/v1/catalog?limit=5&query=like:${encodeURIComponent(title)}&order=desc:score`,
+    { headers: { 'User-Agent': 'Mozilla/5.0' } }
+  )
+  if (!res.ok) return null
+
+  const data = (await res.json()) as {
+    products?: Array<{
+      title: string
+      slug: string
+      price?: {
+        final: string
+        base: string
+        discount: string | null
+        finalMoney?: { amount: string; currency: string; discount: string }
+        baseMoney?: { amount: string; currency: string }
+      }
+    }>
+  }
+
+  // Find the best title match
+  const products = data.products ?? []
+  const exact = products.find((p) => p.title.toLowerCase() === title.toLowerCase())
+  const match = exact ?? products[0]
+  if (!match?.price?.finalMoney) return null
+
+  const finalAmount = parseFloat(match.price.finalMoney.amount)
+  const baseAmount = parseFloat(match.price.baseMoney?.amount ?? match.price.finalMoney.amount)
+  const discountAmount = parseFloat(match.price.finalMoney.discount ?? '0')
+  const discount = baseAmount > 0 && discountAmount > 0
+    ? Math.round((discountAmount / baseAmount) * 100)
+    : 0
+
+  return {
+    store: 'gog',
+    storeName: STORE_NAMES.gog,
+    price: finalAmount,
+    originalPrice: baseAmount,
+    discount,
+    currency: match.price.finalMoney.currency,
+    url: `https://www.gog.com/game/${match.slug}`,
+  }
 }

@@ -40,7 +40,9 @@ registerAllFetchers(syncer, config, db)
 const scheduler = startScheduler(importer, syncer)
 
 const app = new Hono()
-app.use('*', cors())
+app.use('*', cors({
+  origin: process.env.CORS_ORIGIN || '*',
+}))
 app.route('/', healthRoutes(db))
 app.route('/', gamesRoutes(db, igdb))
 app.route('/', importRoutes(db, importer))
