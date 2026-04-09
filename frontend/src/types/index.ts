@@ -38,9 +38,20 @@ export interface ServiceStats {
   count: number
 }
 
-export interface CollectionEntry extends GameSearchResult {
+export interface CollectionEntry {
+  igdbId: number
+  title: string
+  slug: string | null
+  coverImageId: string | null
+  platforms: string[]
+  genres: string[]
+  developer: string | null
+  publisher: string | null
+  aggregatedRating: number | null
+  firstReleaseDate: string | null
   source: 'manual' | 'steam'
   ownedPlatforms: string[] | null
+  storefronts: string[] | null
   steamAppId: number | null
   steamPlaytimeMinutes: number | null
   addedAt: string

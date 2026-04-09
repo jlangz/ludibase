@@ -1,129 +1,73 @@
-import { useState, useRef, useEffect } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../hooks/useAuth'
-import { addToCollection, removeFromCollection, checkCollection } from '../lib/api'
-import { PLATFORMS } from '../constants/gaming'
-import { Plus, Check } from 'lucide-react'
+import { useCollectionCheck } from '../hooks/useCollection'
+import { addToCollection, removeFromCollection } from '../lib/api'
+import { STOREFRONTS } from '../constants/gaming'
+import { Plus, Check, Pencil, X, Trash2 } from 'lucide-react'
 
 interface CollectionButtonProps {
   igdbId: number
-  /** Which platforms this game is available on (from game data) — used to filter the picker */
-  gamePlatforms?: string[]
+  /** Which platforms this game is available on — used to filter the platform picker */
+  gamePlatforms: string[]
   size?: 'sm' | 'md'
 }
 
 export function CollectionButton({ igdbId, gamePlatforms, size = 'md' }: CollectionButtonProps) {
   const { user } = useAuth()
-  const queryClient = useQueryClient()
-  const [showPicker, setShowPicker] = useState(false)
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
-  const pickerRef = useRef<HTMLDivElement>(null)
-
-  const { data: checkResult } = useQuery({
-    queryKey: ['collectionCheck', String(igdbId)],
-    queryFn: () => checkCollection([igdbId]),
-    enabled: !!user,
-    staleTime: 60_000,
-  })
-
-  const inCollection = checkResult?.[igdbId] ?? false
-
-  // Close picker on outside click
-  useEffect(() => {
-    if (!showPicker) return
-    function handleClick(e: MouseEvent) {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        setShowPicker(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
-  }, [showPicker])
-
-  const addMutation = useMutation({
-    mutationFn: (platforms: string[]) => addToCollection(igdbId, platforms),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collectionCheck'] })
-      queryClient.invalidateQueries({ queryKey: ['collection'] })
-      setShowPicker(false)
-      setSelectedPlatforms([])
-    },
-  })
-
-  const removeMutation = useMutation({
-    mutationFn: () => removeFromCollection(igdbId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['collectionCheck'] })
-      queryClient.invalidateQueries({ queryKey: ['collection'] })
-    },
-  })
+  const [showModal, setShowModal] = useState(false)
+  const checkResult = useCollectionCheck([igdbId])
+  const entry = checkResult[igdbId] ?? null
+  const inCollection = entry !== null
 
   if (!user) return null
 
-  const isPending = addMutation.isPending || removeMutation.isPending
-
-  // Filter platform options to only those this game supports (if known)
-  const platformOptions = gamePlatforms && gamePlatforms.length > 0
-    ? PLATFORMS.filter((p) => gamePlatforms.includes(p.value))
-    : PLATFORMS
-
-  function togglePlatform(value: string) {
-    setSelectedPlatforms((prev) =>
-      prev.includes(value) ? prev.filter((p) => p !== value) : [...prev, value]
-    )
-  }
-
-  function handleAddClick(e: React.MouseEvent) {
+  function handleClick(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    if (inCollection) {
-      removeMutation.mutate()
-    } else {
-      setShowPicker(true)
-    }
+    setShowModal(true)
   }
 
-  function handleConfirmAdd() {
-    addMutation.mutate(selectedPlatforms)
-  }
-
-  // Small variant — just an icon button
   if (size === 'sm') {
     return (
-      <div className="relative" ref={pickerRef}>
+      <>
         <button
-          onClick={handleAddClick}
-          disabled={isPending}
+          onClick={handleClick}
           className={`cursor-pointer rounded p-1 transition-colors ${
             inCollection
-              ? 'text-green-400 hover:text-red-400'
+              ? 'text-green-400 hover:text-blue-400'
               : 'text-gray-500 hover:text-blue-400'
           }`}
-          title={inCollection ? 'Remove from collection' : 'Add to collection'}
+          title={inCollection ? 'Edit in collection' : 'Add to collection'}
         >
-          {inCollection ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {inCollection ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
         </button>
-        {showPicker && <PlatformPicker options={platformOptions} selected={selectedPlatforms} onToggle={togglePlatform} onConfirm={handleConfirmAdd} isPending={isPending} />}
-      </div>
+        {showModal && (
+          <CollectionModal
+            igdbId={igdbId}
+            gamePlatforms={gamePlatforms}
+            entry={entry}
+            onClose={() => setShowModal(false)}
+          />
+        )}
+      </>
     )
   }
 
-  // Standard variant
   return (
-    <div className="relative" ref={pickerRef}>
+    <>
       <button
-        onClick={handleAddClick}
-        disabled={isPending}
+        onClick={handleClick}
         className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
           inCollection
-            ? 'bg-green-900/40 text-green-400 hover:bg-red-900/40 hover:text-red-400'
+            ? 'bg-green-900/40 text-green-400 hover:bg-blue-900/40 hover:text-blue-400'
             : 'bg-blue-600 text-white hover:bg-blue-700'
         }`}
       >
         {inCollection ? (
           <>
             <Check className="h-4 w-4" />
-            In Collection
+            In Collection — Edit
           </>
         ) : (
           <>
@@ -132,50 +76,142 @@ export function CollectionButton({ igdbId, gamePlatforms, size = 'md' }: Collect
           </>
         )}
       </button>
-      {showPicker && <PlatformPicker options={platformOptions} selected={selectedPlatforms} onToggle={togglePlatform} onConfirm={handleConfirmAdd} isPending={isPending} />}
-    </div>
+      {showModal && (
+        <CollectionModal
+          igdbId={igdbId}
+          gamePlatforms={gamePlatforms}
+          entry={entry}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+    </>
   )
 }
 
-function PlatformPicker({
-  options,
-  selected,
-  onToggle,
-  onConfirm,
-  isPending,
+function CollectionModal({
+  igdbId,
+  gamePlatforms,
+  entry,
+  onClose,
 }: {
-  options: readonly { value: string; label: string }[]
-  selected: string[]
-  onToggle: (value: string) => void
-  onConfirm: () => void
-  isPending: boolean
+  igdbId: number
+  gamePlatforms: string[]
+  entry: { ownedPlatforms: string[] | null; storefronts: string[] | null } | null
+  onClose: () => void
 }) {
+  const queryClient = useQueryClient()
+  const isEditing = entry !== null
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(entry?.ownedPlatforms ?? [])
+  const [selectedStorefronts, setSelectedStorefronts] = useState<string[]>(entry?.storefronts ?? [])
+
+  const saveMutation = useMutation({
+    mutationFn: () => addToCollection(igdbId, selectedPlatforms, selectedStorefronts),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collectionCheck'] })
+      queryClient.invalidateQueries({ queryKey: ['collection'] })
+      onClose()
+    },
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: () => removeFromCollection(igdbId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collectionCheck'] })
+      queryClient.invalidateQueries({ queryKey: ['collection'] })
+      onClose()
+    },
+  })
+
+  const isPending = saveMutation.isPending || removeMutation.isPending
+  const platformOptions = gamePlatforms.map((p) => ({ value: p, label: p }))
+
+  function toggleItem(value: string, list: string[], setList: (v: string[]) => void) {
+    setList(list.includes(value) ? list.filter((v) => v !== value) : [...list, value])
+  }
+
   return (
-    <div className="absolute left-0 top-full z-50 mt-2 w-64 rounded-lg border border-gray-700 bg-gray-900 p-3 shadow-xl">
-      <p className="mb-2 text-xs font-medium text-gray-400">Which platforms do you own it on?</p>
-      <div className="flex flex-wrap gap-1.5">
-        {options.map((p) => (
-          <button
-            key={p.value}
-            type="button"
-            onClick={() => onToggle(p.value)}
-            className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-              selected.includes(p.value)
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-            }`}
-          >
-            {p.label}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isPending) onClose()
+      }}
+    >
+      <div className="w-full max-w-md rounded-lg border border-gray-700 bg-gray-900 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-gray-800 px-5 py-4">
+          <h2 className="text-lg font-semibold">
+            {isEditing ? 'Edit Game in Collection' : 'Add to Collection'}
+          </h2>
+          <button onClick={onClose} className="rounded p-1 text-gray-400 hover:bg-gray-800 hover:text-gray-200">
+            <X className="h-5 w-5" />
           </button>
-        ))}
+        </div>
+
+        <div className="space-y-4 px-5 py-5">
+          {/* Platforms */}
+          <div>
+            <p className="mb-2 text-sm font-medium text-gray-400">Platforms</p>
+            <div className="flex flex-wrap gap-1.5">
+              {platformOptions.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => toggleItem(p.value, selectedPlatforms, setSelectedPlatforms)}
+                  className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                    selectedPlatforms.includes(p.value)
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Storefronts */}
+          <div>
+            <p className="mb-2 text-sm font-medium text-gray-400">Storefronts</p>
+            <div className="flex flex-wrap gap-1.5">
+              {STOREFRONTS.map((s) => (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => toggleItem(s.value, selectedStorefronts, setSelectedStorefronts)}
+                  className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                    selectedStorefronts.includes(s.value)
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between border-t border-gray-800 px-5 py-4">
+          {isEditing ? (
+            <button
+              onClick={() => removeMutation.mutate()}
+              disabled={isPending}
+              className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              Remove
+            </button>
+          ) : (
+            <div />
+          )}
+          <button
+            onClick={() => saveMutation.mutate()}
+            disabled={isPending}
+            className="rounded bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {isPending ? 'Saving...' : isEditing ? 'Save Changes' : 'Add to Collection'}
+          </button>
+        </div>
       </div>
-      <button
-        onClick={onConfirm}
-        disabled={isPending}
-        className="mt-3 w-full rounded bg-blue-600 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-      >
-        {isPending ? 'Adding...' : 'Add to Collection'}
-      </button>
     </div>
   )
 }

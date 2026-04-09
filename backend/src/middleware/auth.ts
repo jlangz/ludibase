@@ -31,6 +31,7 @@ export function requireAuth(supabaseUrl: string) {
       const { payload } = await jwtVerify(token, jwks!, {
         issuer: `${supabaseUrl}/auth/v1`,
         audience: 'authenticated',
+        algorithms: ['RS256', 'ES256'],
       })
 
       const userId = payload.sub

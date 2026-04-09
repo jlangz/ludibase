@@ -14,6 +14,7 @@ export interface Config {
   steamApiKey?: string
   supabaseUrl?: string
   publicUrl: string
+  frontendUrl: string
 }
 
 export function loadConfig(): Config {
@@ -39,6 +40,7 @@ export function loadConfig(): Config {
   const steamApiKey = process.env.STEAM_API_KEY || undefined
   const supabaseUrl = process.env.SUPABASE_URL || undefined
   const publicUrl = process.env.PUBLIC_URL || `http://localhost:${serverPort}`
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
 
-  return { databaseUrl, serverPort, twitchClientId, twitchClientSecret, itadApiKey, platPricesApiKey, steamApiKey, supabaseUrl, publicUrl }
+  return { databaseUrl, serverPort, twitchClientId, twitchClientSecret, itadApiKey, platPricesApiKey, steamApiKey, supabaseUrl, publicUrl, frontendUrl }
 }

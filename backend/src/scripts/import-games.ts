@@ -4,7 +4,7 @@ import { IgdbService } from '../services/igdb.js'
 import { GameImporter } from '../services/game-importer.js'
 
 const config = loadConfig()
-const { db, client } = createDb(config.databaseUrl)
+const { db, client } = await createDb(config.databaseUrl)
 const igdb = new IgdbService({
   clientId: config.twitchClientId,
   clientSecret: config.twitchClientSecret,

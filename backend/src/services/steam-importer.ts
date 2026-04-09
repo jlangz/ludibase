@@ -34,14 +34,17 @@ export class SteamImporter {
     const titles = steamGames.map((g) => g.name)
     const matches = await this.matcher.matchTitlesBatch(titles)
 
-    // 3. Build collection entries
-    const entries: {
+    // 3. Build collection entries, deduplicating by gameId
+    //    (multiple Steam entries can match the same game in our DB)
+    const entryMap = new Map<number, {
       userId: string
       gameId: number
       source: string
+      ownedPlatforms: string[]
+      storefronts: string[]
       steamAppId: number
       steamPlaytimeMinutes: number
-    }[] = []
+    }>()
 
     let matched = 0
     let unmatched = 0
@@ -50,17 +53,25 @@ export class SteamImporter {
       const match = matches.get(sg.name)
       if (match) {
         matched++
-        entries.push({
-          userId,
-          gameId: match.gameId,
-          source: 'steam',
-          steamAppId: sg.appid,
-          steamPlaytimeMinutes: sg.playtime_forever,
-        })
+        const existing = entryMap.get(match.gameId)
+        // Keep the entry with more playtime if duplicate
+        if (!existing || sg.playtime_forever > existing.steamPlaytimeMinutes) {
+          entryMap.set(match.gameId, {
+            userId,
+            gameId: match.gameId,
+            source: 'steam',
+            ownedPlatforms: ['PC'],
+            storefronts: ['steam'],
+            steamAppId: sg.appid,
+            steamPlaytimeMinutes: sg.playtime_forever,
+          })
+        }
       } else {
         unmatched++
       }
     }
+
+    const entries = [...entryMap.values()]
 
     // 4. Upsert into user_game_collection in batches
     const batchSize = 100
@@ -75,6 +86,18 @@ export class SteamImporter {
             steamAppId: sql`EXCLUDED.steam_app_id`,
             steamPlaytimeMinutes: sql`EXCLUDED.steam_playtime_minutes`,
             source: sql`CASE WHEN ${userGameCollection.source} = 'manual' THEN 'manual' ELSE EXCLUDED.source END`,
+            ownedPlatforms: sql`
+              CASE
+                WHEN ${userGameCollection.ownedPlatforms} IS NULL THEN EXCLUDED.owned_platforms
+                WHEN NOT (${userGameCollection.ownedPlatforms} @> '"PC"'::jsonb) THEN ${userGameCollection.ownedPlatforms} || '"PC"'::jsonb
+                ELSE ${userGameCollection.ownedPlatforms}
+              END`,
+            storefronts: sql`
+              CASE
+                WHEN ${userGameCollection.storefronts} IS NULL THEN EXCLUDED.storefronts
+                WHEN NOT (${userGameCollection.storefronts} @> '"steam"'::jsonb) THEN ${userGameCollection.storefronts} || '"steam"'::jsonb
+                ELSE ${userGameCollection.storefronts}
+              END`,
             updatedAt: new Date(),
           },
         })

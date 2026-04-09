@@ -2,20 +2,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
 import { getCollection, addToCollection, removeFromCollection, checkCollection } from '../lib/api'
 
-export function useCollection(page = 1, source?: string) {
+export function useCollection(page = 1, storefront?: string) {
   const { user } = useAuth()
   const queryClient = useQueryClient()
 
   const query = useQuery({
-    queryKey: ['collection', user?.id, page, source],
-    queryFn: () => getCollection(page, 20, source),
+    queryKey: ['collection', user?.id, page, storefront],
+    queryFn: () => getCollection(page, 20, storefront),
     enabled: !!user,
     staleTime: 60_000,
   })
 
   const addMutation = useMutation({
-    mutationFn: ({ igdbId, platforms }: { igdbId: number; platforms?: string[] }) =>
-      addToCollection(igdbId, platforms),
+    mutationFn: ({ igdbId, platforms, storefronts }: { igdbId: number; platforms?: string[]; storefronts?: string[] }) =>
+      addToCollection(igdbId, platforms, storefronts),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['collection'] })
       queryClient.invalidateQueries({ queryKey: ['collectionCheck'] })
@@ -33,7 +33,7 @@ export function useCollection(page = 1, source?: string) {
   return {
     data: query.data,
     isLoading: query.isLoading,
-    addGame: (igdbId: number, platforms?: string[]) => addMutation.mutateAsync({ igdbId, platforms }),
+    addGame: (igdbId: number, platforms?: string[], storefronts?: string[]) => addMutation.mutateAsync({ igdbId, platforms, storefronts }),
     removeGame: removeMutation.mutateAsync,
     isAdding: addMutation.isPending,
     isRemoving: removeMutation.isPending,

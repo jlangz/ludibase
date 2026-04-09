@@ -79,6 +79,7 @@ export const userGameCollection = pgTable('user_game_collection', {
   gameId: integer('game_id').notNull().references(() => games.id),
   source: text('source').notNull(),
   ownedPlatforms: jsonb('owned_platforms').$type<string[]>(),
+  storefronts: jsonb('storefronts').$type<string[]>(),
   steamAppId: integer('steam_app_id'),
   steamPlaytimeMinutes: integer('steam_playtime_minutes'),
   addedAt: timestamp('added_at', { withTimezone: true }).defaultNow().notNull(),

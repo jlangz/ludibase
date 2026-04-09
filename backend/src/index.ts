@@ -9,8 +9,6 @@ import { importRoutes } from './routes/import.js'
 import { subscriptionRoutes } from './routes/subscriptions.js'
 import { collectionRoutes } from './routes/collection.js'
 import { steamRoutes } from './routes/steam.js'
-import { SteamService } from './services/steam.js'
-import { SteamImporter } from './services/steam-importer.js'
 import { IgdbService } from './services/igdb.js'
 import { GameImporter } from './services/game-importer.js'
 import { SubscriptionSyncer } from './services/subscription-syncer.js'
@@ -19,7 +17,7 @@ import { startScheduler } from './scheduler/index.js'
 
 const config = loadConfig()
 
-const { db, client } = createDb(config.databaseUrl)
+const { db, client } = await createDb(config.databaseUrl)
 
 // Verify database connection
 try {
@@ -52,9 +50,7 @@ if (config.supabaseUrl) {
   app.route('/', collectionRoutes(db, config.supabaseUrl))
 
   if (config.steamApiKey) {
-    const steam = new SteamService(config.steamApiKey)
-    const steamImporter = new SteamImporter(db, steam)
-    app.route('/', steamRoutes(db, steam, steamImporter, config))
+    app.route('/', steamRoutes(db, config))
     console.log('Steam integration enabled')
   }
 } else {

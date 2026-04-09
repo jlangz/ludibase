@@ -31,3 +31,17 @@ export const SUBSCRIPTION_SERVICES = [
   { value: 'geforce-now', label: 'GeForce NOW' },
   { value: 'amazon-luna', label: 'Amazon Luna' },
 ] as const
+
+/** Digital storefronts where games can be purchased/owned */
+export const STOREFRONTS = [
+  { value: 'steam', label: 'Steam' },
+  { value: 'epic', label: 'Epic Games Store' },
+  { value: 'gog', label: 'GOG' },
+  { value: 'xbox', label: 'Xbox / Microsoft Store' },
+  { value: 'playstation', label: 'PlayStation Store' },
+  { value: 'nintendo', label: 'Nintendo eShop' },
+  { value: 'ea-app', label: 'EA App' },
+  { value: 'ubisoft', label: 'Ubisoft Connect' },
+  { value: 'battle-net', label: 'Battle.net' },
+  { value: 'physical', label: 'Physical' },
+] as const

@@ -83,26 +83,27 @@ export async function searchGamesFiltered(params: FilteredSearchParams): Promise
 
 // --- Collection APIs (authenticated) ---
 
-export async function getCollection(page = 1, pageSize = 20, source?: string): Promise<{
+export async function getCollection(page = 1, pageSize = 20, storefront?: string): Promise<{
   games: CollectionEntry[]
   total: number
   page: number
   pageSize: number
+  storefronts: string[]
 }> {
   const headers = await authHeaders()
   const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
-  if (source) qs.set('source', source)
+  if (storefront) qs.set('storefront', storefront)
   const res = await fetch(`${API_BASE}/collection?${qs}`, { headers })
   if (!res.ok) throw new Error('Failed to fetch collection')
   return res.json()
 }
 
-export async function addToCollection(igdbId: number, platforms?: string[]): Promise<void> {
+export async function addToCollection(igdbId: number, platforms?: string[], storefronts?: string[]): Promise<void> {
   const headers = await authHeaders()
   const res = await fetch(`${API_BASE}/collection/${igdbId}`, {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ platforms }),
+    body: JSON.stringify({ platforms, storefronts }),
   })
   if (!res.ok) throw new Error('Failed to add to collection')
 }
@@ -113,7 +114,12 @@ export async function removeFromCollection(igdbId: number): Promise<void> {
   if (!res.ok) throw new Error('Failed to remove from collection')
 }
 
-export async function checkCollection(igdbIds: number[]): Promise<Record<number, boolean>> {
+export interface CollectionCheckEntry {
+  ownedPlatforms: string[] | null
+  storefronts: string[] | null
+}
+
+export async function checkCollection(igdbIds: number[]): Promise<Record<number, CollectionCheckEntry | null>> {
   const headers = await authHeaders()
   const res = await fetch(`${API_BASE}/collection/check?igdbIds=${igdbIds.join(',')}`, { headers })
   if (!res.ok) throw new Error('Failed to check collection')

@@ -4,7 +4,7 @@ import { SubscriptionSyncer } from '../services/subscription-syncer.js'
 import { registerAllFetchers } from '../services/register-fetchers.js'
 
 const config = loadConfig()
-const { db, client } = createDb(config.databaseUrl)
+const { db, client } = await createDb(config.databaseUrl)
 const syncer = new SubscriptionSyncer(db)
 registerAllFetchers(syncer, config, db)
 

@@ -11,19 +11,20 @@ export function collectionRoutes(db: Database, supabaseUrl: string) {
   app.use('/collection', requireAuth(supabaseUrl))
 
   /**
-   * GET /collection?page=1&pageSize=20&source=steam
+   * GET /collection?page=1&pageSize=20&storefront=steam
    * Returns the authenticated user's game collection.
+   * Optional storefront filter checks the storefronts jsonb array.
    */
   app.get('/collection', async (c) => {
     const userId = c.get('userId')
     const page = Math.max(parseInt(c.req.query('page') ?? '1', 10) || 1, 1)
     const pageSize = Math.min(parseInt(c.req.query('pageSize') ?? '20', 10) || 20, 100)
-    const source = c.req.query('source') // optional: 'steam' | 'manual'
+    const storefront = c.req.query('storefront')
     const offset = (page - 1) * pageSize
 
     const conditions = [eq(userGameCollection.userId, userId)]
-    if (source) {
-      conditions.push(eq(userGameCollection.source, source))
+    if (storefront) {
+      conditions.push(sql`${userGameCollection.storefronts} @> ${JSON.stringify([storefront])}::jsonb`)
     }
 
     const where = conditions.length === 1 ? conditions[0] : and(...conditions)
@@ -49,6 +50,7 @@ export function collectionRoutes(db: Database, supabaseUrl: string) {
         firstReleaseDate: games.firstReleaseDate,
         source: userGameCollection.source,
         ownedPlatforms: userGameCollection.ownedPlatforms,
+        storefronts: userGameCollection.storefronts,
         steamAppId: userGameCollection.steamAppId,
         steamPlaytimeMinutes: userGameCollection.steamPlaytimeMinutes,
         addedAt: userGameCollection.addedAt,
@@ -60,6 +62,14 @@ export function collectionRoutes(db: Database, supabaseUrl: string) {
       .limit(pageSize)
       .offset(offset)
 
+    // Get distinct storefronts across entire collection (unfiltered)
+    const sfRows = await db
+      .select({ storefronts: userGameCollection.storefronts })
+      .from(userGameCollection)
+      .where(eq(userGameCollection.userId, userId))
+
+    const allStorefronts = [...new Set(sfRows.flatMap((r) => r.storefronts ?? []))].sort()
+
     return c.json({
       games: results.map((r) => ({
         ...r,
@@ -69,6 +79,7 @@ export function collectionRoutes(db: Database, supabaseUrl: string) {
       total,
       page,
       pageSize,
+      storefronts: allStorefronts,
     })
   })
 
@@ -84,9 +95,12 @@ export function collectionRoutes(db: Database, supabaseUrl: string) {
       return c.json({ error: 'Invalid IGDB ID' }, 400)
     }
 
-    const body = await c.req.json().catch(() => ({})) as { platforms?: string[] }
+    const body = await c.req.json().catch(() => ({})) as { platforms?: string[]; storefronts?: string[] }
     const ownedPlatforms = Array.isArray(body.platforms) && body.platforms.length > 0
       ? body.platforms
+      : null
+    const storefronts = Array.isArray(body.storefronts) && body.storefronts.length > 0
+      ? body.storefronts
       : null
 
     // Look up internal game ID
@@ -107,11 +121,13 @@ export function collectionRoutes(db: Database, supabaseUrl: string) {
         gameId: game.id,
         source: 'manual',
         ownedPlatforms,
+        storefronts,
       })
       .onConflictDoUpdate({
         target: [userGameCollection.userId, userGameCollection.gameId],
         set: {
           ownedPlatforms,
+          storefronts,
           updatedAt: new Date(),
         },
       })
@@ -156,6 +172,7 @@ export function collectionRoutes(db: Database, supabaseUrl: string) {
   /**
    * GET /collection/check?igdbIds=1,2,3
    * Batch check which games are in the user's collection.
+   * Returns entry details (platforms, storefronts) or null per game.
    */
   app.get('/collection/check', async (c) => {
     const userId = c.get('userId')
@@ -166,7 +183,11 @@ export function collectionRoutes(db: Database, supabaseUrl: string) {
     if (igdbIds.length === 0) return c.json({})
 
     const results = await db
-      .select({ igdbId: games.igdbId })
+      .select({
+        igdbId: games.igdbId,
+        ownedPlatforms: userGameCollection.ownedPlatforms,
+        storefronts: userGameCollection.storefronts,
+      })
       .from(userGameCollection)
       .innerJoin(games, eq(games.id, userGameCollection.gameId))
       .where(
@@ -176,10 +197,13 @@ export function collectionRoutes(db: Database, supabaseUrl: string) {
         )
       )
 
-    const inCollection = new Set(results.map((r) => r.igdbId))
-    const response: Record<number, boolean> = {}
+    const response: Record<number, { ownedPlatforms: string[] | null; storefronts: string[] | null } | null> = {}
+    const resultMap = new Map(results.map((r) => [r.igdbId, r]))
     for (const id of igdbIds) {
-      response[id] = inCollection.has(id)
+      const entry = resultMap.get(id)
+      response[id] = entry
+        ? { ownedPlatforms: entry.ownedPlatforms, storefronts: entry.storefronts }
+        : null
     }
 
     return c.json(response)
