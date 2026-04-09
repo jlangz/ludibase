@@ -55,6 +55,36 @@ export async function getServiceGames(slug: string, page = 1, pageSize = 20): Pr
   return res.json()
 }
 
+export async function getServiceFamily(params: {
+  family: string
+  q?: string
+  sort?: string
+  platform?: string
+  tier?: string
+  page?: number
+  pageSize?: number
+}): Promise<{
+  family: string
+  name: string
+  games: (GameSearchResult & { tiers: string[] })[]
+  total: number
+  page: number
+  pageSize: number
+  tierCounts: Record<string, number>
+  tierExclusive: Record<string, number>
+}> {
+  const qs = new URLSearchParams()
+  if (params.q) qs.set('q', params.q)
+  if (params.sort) qs.set('sort', params.sort)
+  if (params.platform) qs.set('platform', params.platform)
+  if (params.tier) qs.set('tier', params.tier)
+  if (params.page) qs.set('page', String(params.page))
+  if (params.pageSize) qs.set('pageSize', String(params.pageSize))
+  const res = await fetch(`${API_BASE}/subscriptions/family/${params.family}?${qs}`)
+  if (!res.ok) throw new Error('Failed to fetch service family')
+  return res.json()
+}
+
 export interface FilteredSearchParams {
   q?: string
   services?: string[]

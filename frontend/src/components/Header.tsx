@@ -4,7 +4,8 @@ import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../hooks/useProfile'
 import { useGameSearch } from '../hooks/useGameSearch'
 import { igdbImageUrl } from '../lib/api'
-import { Search } from 'lucide-react';
+import { SERVICE_FAMILIES } from '../constants/gaming'
+import { Search, ChevronDown } from 'lucide-react'
 
 export function Header() {
   const { user, loading, signOut } = useAuth()
@@ -12,15 +13,20 @@ export function Header() {
   const navigate = useNavigate()
   const search = useGameSearch()
   const [isFocused, setIsFocused] = useState(false)
+  const [showServices, setShowServices] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const servicesRef = useRef<HTMLDivElement>(null)
 
   const showDropdown = isFocused && search.query.length >= 2
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsFocused(false)
+      }
+      if (servicesRef.current && !servicesRef.current.contains(e.target as Node)) {
+        setShowServices(false)
       }
     }
     document.addEventListener('mousedown', handleClick)
@@ -111,9 +117,40 @@ export function Header() {
         )}
       </div>
 
-      <Link to="/search" className="border py-1 px-2 rounded-md shrink-0 text-sm text-gray-400 hover:text-gray-200 flex flex-row justify-center items-center">
-        Search by Service <Search className="ml-2 h-4 w-4" />
-      </Link>
+      {/* Services dropdown */}
+      <div ref={servicesRef} className="relative shrink-0">
+        <button
+          onClick={() => setShowServices(!showServices)}
+          className="flex items-center gap-1 rounded-md border border-gray-700 px-2 py-1 text-sm text-gray-400 hover:text-gray-200"
+        >
+          Services
+          <ChevronDown className={`h-4 w-4 transition-transform ${showServices ? 'rotate-180' : ''}`} />
+        </button>
+
+        {showServices && (
+          <div className="absolute right-0 top-full z-50 mt-1 w-56 rounded-lg border border-gray-700 bg-gray-900 py-1 shadow-xl">
+            {Object.entries(SERVICE_FAMILIES).map(([key, fam]) => (
+              <Link
+                key={key}
+                to={`/services/${key}`}
+                onClick={() => setShowServices(false)}
+                className="block px-4 py-2 text-sm text-gray-300 transition-colors hover:bg-gray-800 hover:text-white"
+              >
+                {fam.name}
+              </Link>
+            ))}
+            <div className="my-1 border-t border-gray-800" />
+            <Link
+              to="/search"
+              onClick={() => setShowServices(false)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+            >
+              <Search className="h-3.5 w-3.5" />
+              Search by Service
+            </Link>
+          </div>
+        )}
+      </div>
 
       {/* Auth nav */}
       {!loading && (

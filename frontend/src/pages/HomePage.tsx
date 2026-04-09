@@ -8,11 +8,18 @@ import {
   checkSubscriptions,
   igdbImageUrl,
 } from '../lib/api'
-import { SUBSCRIPTION_SERVICES } from '../constants/gaming'
+import { SUBSCRIPTION_SERVICES, SERVICE_FAMILIES } from '../constants/gaming'
 import type { GameSearchResult } from '../types'
 
 const serviceLabels = Object.fromEntries(
   SUBSCRIPTION_SERVICES.map((s) => [s.value, s.label])
+)
+
+// Map each service slug to its family key for "View all" links
+const slugToFamily = Object.fromEntries(
+  Object.entries(SERVICE_FAMILIES).flatMap(([familyKey, fam]) =>
+    fam.tiers.map((t) => [t.slug, familyKey])
+  )
 )
 
 export function HomePage() {
@@ -122,9 +129,19 @@ function BrowseByServiceSection() {
             ))}
           </div>
           {serviceData.total > 12 && (
-            <p className="mt-3 text-sm text-gray-500">
-              Showing 12 of {serviceData.total} games on {serviceLabels[activeService] ?? activeService}
-            </p>
+            <div className="mt-3 flex items-center gap-3">
+              <span className="text-sm text-gray-500">
+                Showing 12 of {serviceData.total} games
+              </span>
+              {slugToFamily[activeService] && (
+                <Link
+                  to={`/services/${slugToFamily[activeService]}`}
+                  className="text-sm text-blue-400 hover:underline"
+                >
+                  View all →
+                </Link>
+              )}
+            </div>
           )}
         </div>
       )}

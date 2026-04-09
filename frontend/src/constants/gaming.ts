@@ -72,6 +72,62 @@ export function collapseToHighestTiers(services: string[]): string[] {
   return [...set]
 }
 
+/** Service families with tier metadata for dedicated service pages */
+export const SERVICE_FAMILIES: Record<string, {
+  name: string
+  tiers: { slug: string; label: string; bg: string; text: string }[]
+  platformFilter: boolean
+}> = {
+  gamepass: {
+    name: 'Xbox Game Pass',
+    tiers: [
+      { slug: 'gamepass-core', label: 'Core', bg: 'bg-gray-700/50', text: 'text-gray-300' },
+      { slug: 'gamepass-standard', label: 'Standard', bg: 'bg-green-900/50', text: 'text-green-400' },
+      { slug: 'gamepass-ultimate', label: 'Ultimate', bg: 'bg-purple-900/50', text: 'text-purple-400' },
+    ],
+    platformFilter: true,
+  },
+  'ps-plus': {
+    name: 'PlayStation Plus',
+    tiers: [
+      { slug: 'ps-plus-essential', label: 'Essential', bg: 'bg-blue-900/50', text: 'text-blue-400' },
+      { slug: 'ps-plus-extra', label: 'Extra', bg: 'bg-purple-900/50', text: 'text-purple-400' },
+      { slug: 'ps-plus-premium', label: 'Premium', bg: 'bg-yellow-900/50', text: 'text-yellow-400' },
+    ],
+    platformFilter: false,
+  },
+  'geforce-now': {
+    name: 'GeForce NOW',
+    tiers: [
+      { slug: 'geforce-now', label: 'GeForce NOW', bg: 'bg-green-900/50', text: 'text-green-400' },
+    ],
+    platformFilter: false,
+  },
+  'ea-play': {
+    name: 'EA Play',
+    tiers: [
+      { slug: 'ea-play', label: 'EA Play', bg: 'bg-blue-900/50', text: 'text-blue-400' },
+    ],
+    platformFilter: false,
+  },
+  'ubisoft-plus': {
+    name: 'Ubisoft+',
+    tiers: [
+      { slug: 'ubisoft-plus', label: 'Classics', bg: 'bg-blue-900/50', text: 'text-blue-400' },
+      { slug: 'ubisoft-plus-premium', label: 'Premium', bg: 'bg-purple-900/50', text: 'text-purple-400' },
+    ],
+    platformFilter: false,
+  },
+  'nintendo-online': {
+    name: 'Nintendo Switch Online',
+    tiers: [
+      { slug: 'nintendo-online', label: 'Basic', bg: 'bg-red-900/50', text: 'text-red-400' },
+      { slug: 'nintendo-online-expansion', label: 'Expansion Pack', bg: 'bg-red-800/50', text: 'text-red-300' },
+    ],
+    platformFilter: false,
+  },
+}
+
 /** Digital storefronts where games can be purchased/owned */
 export const STOREFRONTS = [
   { value: 'steam', label: 'Steam' },

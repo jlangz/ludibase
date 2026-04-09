@@ -4,6 +4,36 @@ import type { Database } from '../db/index.js'
 import { games, gameSubscriptions } from '../db/schema.js'
 import type { SubscriptionSyncer } from '../services/subscription-syncer.js'
 
+const SERVICE_FAMILIES: Record<string, { name: string; tiers: string[] }> = {
+  gamepass: { name: 'Xbox Game Pass', tiers: ['gamepass-core', 'gamepass-standard', 'gamepass-ultimate'] },
+  'ps-plus': { name: 'PlayStation Plus', tiers: ['ps-plus-essential', 'ps-plus-extra', 'ps-plus-premium'] },
+  'geforce-now': { name: 'GeForce NOW', tiers: ['geforce-now'] },
+  'ea-play': { name: 'EA Play', tiers: ['ea-play'] },
+  'ubisoft-plus': { name: 'Ubisoft+', tiers: ['ubisoft-plus', 'ubisoft-plus-premium'] },
+  'nintendo-online': { name: 'Nintendo Switch Online', tiers: ['nintendo-online', 'nintendo-online-expansion'] },
+}
+
+function buildSortClause(sort: string) {
+  switch (sort) {
+    case 'alpha-desc': return sql`${games.title} DESC`
+    case 'rating-desc': return sql`COALESCE(${games.aggregatedRating}, 0) DESC, ${games.title} ASC`
+    case 'rating-asc': return sql`COALESCE(${games.aggregatedRating}, 0) ASC, ${games.title} ASC`
+    case 'alpha-asc':
+    default: return sql`${games.title} ASC`
+  }
+}
+
+function buildSearchCondition(q: string) {
+  if (q.length < 2) return null
+  return sql`(${games.title} % ${q} OR ${games.title} ILIKE ${'%' + q + '%'})`
+}
+
+function buildPlatformCondition(platform: string) {
+  if (platform === 'pc') return sql`${games.platforms} @> '"PC"'::jsonb`
+  if (platform === 'console') return sql`(${games.platforms} @> '"Series X|S"'::jsonb OR ${games.platforms} @> '"XONE"'::jsonb)`
+  return null
+}
+
 export function subscriptionRoutes(db: Database, syncer: SubscriptionSyncer) {
   const app = new Hono()
 
@@ -174,6 +204,119 @@ export function subscriptionRoutes(db: Database, syncer: SubscriptionSyncer) {
       status: 'started',
       source: source ?? 'all',
       availableSources: syncer.registeredFetchers,
+    })
+  })
+
+  /**
+   * GET /subscriptions/family/:family?q=&sort=&platform=&tier=&page=&pageSize=
+   * Returns all games across a service family's tiers, with per-game tier badges.
+   */
+  app.get('/subscriptions/family/:family', async (c) => {
+    const familyKey = c.req.param('family')
+    const family = SERVICE_FAMILIES[familyKey]
+    if (!family) return c.json({ error: 'Unknown service family' }, 404)
+
+    const q = c.req.query('q')?.trim() ?? ''
+    const sort = c.req.query('sort') ?? 'alpha-asc'
+    const platform = c.req.query('platform') ?? ''
+    const tierFilter = c.req.query('tier') ?? ''
+    const page = Math.max(parseInt(c.req.query('page') ?? '1', 10) || 1, 1)
+    const pageSize = Math.min(parseInt(c.req.query('pageSize') ?? '30', 10) || 30, 100)
+    const offset = (page - 1) * pageSize
+
+    const targetTiers = tierFilter && family.tiers.includes(tierFilter)
+      ? [tierFilter]
+      : family.tiers
+
+    const conditions = [
+      sql`${gameSubscriptions.serviceSlug} IN (${sql.join(targetTiers.map((t) => sql`${t}`), sql`, `)})`,
+      isNull(gameSubscriptions.removedAt),
+    ]
+
+    const searchCond = buildSearchCondition(q)
+    if (searchCond) conditions.push(searchCond)
+    const platCond = buildPlatformCondition(platform)
+    if (platCond) conditions.push(platCond)
+
+    const where = and(...conditions)
+
+    // Count distinct games
+    const [countResult] = await db
+      .select({ count: sql<number>`count(DISTINCT ${games.id})` })
+      .from(gameSubscriptions)
+      .innerJoin(games, eq(games.id, gameSubscriptions.gameId))
+      .where(where)
+
+    const total = Number(countResult?.count ?? 0)
+
+    // Fetch games with tier aggregation
+    const results = await db
+      .select({
+        igdbId: games.igdbId,
+        title: games.title,
+        slug: games.slug,
+        coverImageId: games.coverImageId,
+        platforms: games.platforms,
+        genres: games.genres,
+        developer: games.developer,
+        publisher: games.publisher,
+        aggregatedRating: games.aggregatedRating,
+        firstReleaseDate: games.firstReleaseDate,
+        tiers: sql<string[]>`array_agg(DISTINCT ${gameSubscriptions.serviceSlug})`,
+      })
+      .from(gameSubscriptions)
+      .innerJoin(games, eq(games.id, gameSubscriptions.gameId))
+      .where(where)
+      .groupBy(games.id)
+      .orderBy(buildSortClause(sort))
+      .limit(pageSize)
+      .offset(offset)
+
+    // Tier stats: total per tier + exclusive per tier
+    // Respects platform filter so counts update when filtering by PC/Console
+    const tierSlugs = family.tiers
+    const tierConditions = [
+      sql`${gameSubscriptions.serviceSlug} IN (${sql.join(tierSlugs.map((t) => sql`${t}`), sql`, `)})`,
+      isNull(gameSubscriptions.removedAt),
+    ]
+    const tierPlatCond = buildPlatformCondition(platform)
+    if (tierPlatCond) tierConditions.push(tierPlatCond)
+
+    const tierCountRows = await db
+      .select({
+        serviceSlug: gameSubscriptions.serviceSlug,
+        count: sql<number>`count(DISTINCT ${gameSubscriptions.gameId})`,
+      })
+      .from(gameSubscriptions)
+      .innerJoin(games, eq(games.id, gameSubscriptions.gameId))
+      .where(and(...tierConditions))
+      .groupBy(gameSubscriptions.serviceSlug)
+
+    const tierTotals: Record<string, number> = {}
+    for (const tier of tierSlugs) tierTotals[tier] = 0
+    for (const row of tierCountRows) tierTotals[row.serviceSlug] = Number(row.count)
+
+    // Compute exclusive counts: for each tier, subtract the count of the next-lower tier
+    // Tiers are ordered low→high in the family definition
+    const tierExclusive: Record<string, number> = {}
+    for (let i = 0; i < tierSlugs.length; i++) {
+      const current = tierTotals[tierSlugs[i]]
+      const lower = i > 0 ? tierTotals[tierSlugs[i - 1]] : 0
+      tierExclusive[tierSlugs[i]] = current - lower
+    }
+
+    return c.json({
+      family: familyKey,
+      name: family.name,
+      games: results.map((r) => ({
+        ...r,
+        firstReleaseDate: r.firstReleaseDate?.toISOString() ?? null,
+      })),
+      total,
+      page,
+      pageSize,
+      tierCounts: tierTotals,
+      tierExclusive,
     })
   })
 
