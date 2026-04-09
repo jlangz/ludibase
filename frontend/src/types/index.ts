@@ -37,3 +37,26 @@ export interface ServiceStats {
   slug: string
   count: number
 }
+
+export interface CollectionEntry extends GameSearchResult {
+  source: 'manual' | 'steam'
+  ownedPlatforms: string[] | null
+  steamAppId: number | null
+  steamPlaytimeMinutes: number | null
+  addedAt: string
+}
+
+export interface SteamConnection {
+  steamId: string
+  steamUsername: string | null
+  steamAvatarUrl: string | null
+  connectedAt: string
+  lastImportAt: string | null
+}
+
+export interface SteamImportResult {
+  total: number
+  matched: number
+  unmatched: number
+  imported: number
+}

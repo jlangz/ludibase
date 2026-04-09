@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { useProfile } from '../hooks/useProfile'
 import { useUsernameCheck, validateUsername } from '../hooks/useUsernameCheck'
 import { useAuth } from '../hooks/useAuth'
-import { AvatarUploader } from './AvatarUploader'
-import { MultiSelectChips } from './MultiSelectChips'
+import { AvatarUploader } from '../components/AvatarUploader'
+import { MultiSelectChips } from '../components/MultiSelectChips'
 import { PLATFORMS, SUBSCRIPTION_SERVICES } from '../constants/gaming'
+import { useSteamConnection } from '../hooks/useSteamConnection'
+import { useSearchParams } from 'react-router-dom'
 
 interface FormState {
   username: string
@@ -106,6 +108,17 @@ export function ProfileEditor() {
     // Immediately persist avatar change
     updateProfile({ avatar_url: url }).catch(() => {})
   }
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [steamMessage, setSteamMessage] = useState<string | null>(null)
+
+  // Handle Steam callback redirect
+  useEffect(() => {
+    if (searchParams.get('steam') === 'connected') {
+      setSteamMessage('Steam account connected successfully!')
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   if (isLoading) {
     return <p className="text-gray-400">Loading profile...</p>
@@ -238,6 +251,9 @@ export function ProfileEditor() {
           </div>
         </section>
 
+        {/* Connected Accounts */}
+        <SteamSection />
+
         {/* Save / Cancel */}
         <div className="flex items-center gap-3">
           <button
@@ -262,6 +278,98 @@ export function ProfileEditor() {
           )}
         </div>
       </form>
+
+      {steamMessage && (
+        <div className="mt-4 rounded-lg border border-green-800 bg-green-900/20 px-4 py-3 text-sm text-green-400">
+          {steamMessage}
+        </div>
+      )}
     </div>
+  )
+}
+
+function SteamSection() {
+  const steam = useSteamConnection()
+  const [importResult, setImportResult] = useState<{ matched: number; unmatched: number; total: number } | null>(null)
+
+  async function handleImport() {
+    setImportResult(null)
+    const result = await steam.importLibrary()
+    setImportResult(result)
+  }
+
+  return (
+    <section className="space-y-3 rounded-lg border border-gray-800 bg-gray-900 p-6">
+      <h3 className="text-lg font-semibold">Connected Accounts</h3>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {steam.isConnected && steam.connection?.steamAvatarUrl && (
+            <img
+              src={steam.connection.steamAvatarUrl}
+              alt=""
+              className="h-10 w-10 rounded"
+            />
+          )}
+          <div>
+            <p className="text-sm font-medium">Steam</p>
+            {steam.isConnected ? (
+              <p className="text-xs text-gray-400">
+                Connected as {steam.connection?.steamUsername ?? steam.connection?.steamId}
+                {steam.connection?.lastImportAt && (
+                  <> · Last imported {new Date(steam.connection.lastImportAt).toLocaleDateString()}</>
+                )}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500">Not connected</p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-2">
+          {steam.isConnected ? (
+            <>
+              <button
+                type="button"
+                onClick={handleImport}
+                disabled={steam.isImporting}
+                className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+              >
+                {steam.isImporting ? 'Importing...' : 'Import Library'}
+              </button>
+              <button
+                type="button"
+                onClick={() => steam.disconnect()}
+                disabled={steam.isDisconnecting}
+                className="rounded border border-gray-700 px-3 py-1.5 text-sm hover:bg-gray-800 disabled:opacity-50"
+              >
+                Disconnect
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => steam.connect()}
+              className="rounded bg-gray-700 px-3 py-1.5 text-sm font-medium hover:bg-gray-600"
+            >
+              Connect Steam
+            </button>
+          )}
+        </div>
+      </div>
+
+      {importResult && (
+        <div className="rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm">
+          <p className="text-gray-300">
+            Imported <span className="font-medium text-green-400">{importResult.matched}</span> of {importResult.total} Steam games
+          </p>
+          {importResult.unmatched > 0 && (
+            <p className="text-xs text-gray-500">
+              {importResult.unmatched} games couldn't be matched to our database
+            </p>
+          )}
+        </div>
+      )}
+    </section>
   )
 }

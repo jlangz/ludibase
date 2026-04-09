@@ -39,7 +39,7 @@ async function fetchSiglProductIds(siglId: string, market = 'US', language = 'en
     throw new Error(`Xbox sigls fetch failed (${siglId}): ${res.status} ${res.statusText}`)
   }
 
-  const entries: SiglEntry[] = await res.json()
+  const entries = (await res.json()) as SiglEntry[]
 
   // First entry is the collection metadata, rest are product IDs
   return entries
@@ -63,7 +63,7 @@ async function fetchProductDetails(productIds: string[], market = 'US', language
       continue
     }
 
-    const data: DisplayCatalogResponse = await res.json()
+    const data = (await res.json()) as DisplayCatalogResponse
     for (const product of data.Products ?? []) {
       const title = product.LocalizedProperties?.[0]?.ProductTitle
       if (title) {

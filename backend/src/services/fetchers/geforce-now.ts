@@ -19,7 +19,7 @@ export async function fetchGeforceNowCatalog(): Promise<GfnGame[]> {
     throw new Error(`GeForce NOW fetch failed: ${res.status} ${res.statusText}`)
   }
 
-  const data: GfnApiEntry[] = await res.json()
+  const data = (await res.json()) as GfnApiEntry[]
 
   return data
     .filter((g) => g.status === 'AVAILABLE' && g.title)

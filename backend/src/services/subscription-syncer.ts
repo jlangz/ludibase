@@ -1,7 +1,7 @@
-import { eq, sql, and, isNull, inArray } from 'drizzle-orm'
+import { eq, and, isNull, inArray } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import { gameSubscriptions, subscriptionSyncRuns } from '../db/schema.js'
-import { GameMatcher, type MatchResult } from './game-matcher.js'
+import { GameMatcher } from './game-matcher.js'
 
 export interface FetchedGame {
   title: string

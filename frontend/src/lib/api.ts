@@ -1,6 +1,13 @@
-import type { GameSearchResult, SubscriptionInfo, ServiceStats } from '../types'
+import type { GameSearchResult, SubscriptionInfo, ServiceStats, CollectionEntry, SteamConnection, SteamImportResult } from '../types'
+import { supabase } from './supabase'
 
 const API_BASE = '/api'
+
+async function authHeaders(): Promise<HeadersInit> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.access_token) throw new Error('Not authenticated')
+  return { Authorization: `Bearer ${session.access_token}` }
+}
 
 export async function searchGames(query: string): Promise<GameSearchResult[]> {
   const res = await fetch(`${API_BASE}/games/search?q=${encodeURIComponent(query)}`)
@@ -72,6 +79,75 @@ export async function searchGamesFiltered(params: FilteredSearchParams): Promise
   const res = await fetch(`${API_BASE}/games/search/filtered?${qs}`)
   if (!res.ok) throw new Error('Search failed')
   return res.json()
+}
+
+// --- Collection APIs (authenticated) ---
+
+export async function getCollection(page = 1, pageSize = 20, source?: string): Promise<{
+  games: CollectionEntry[]
+  total: number
+  page: number
+  pageSize: number
+}> {
+  const headers = await authHeaders()
+  const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+  if (source) qs.set('source', source)
+  const res = await fetch(`${API_BASE}/collection?${qs}`, { headers })
+  if (!res.ok) throw new Error('Failed to fetch collection')
+  return res.json()
+}
+
+export async function addToCollection(igdbId: number, platforms?: string[]): Promise<void> {
+  const headers = await authHeaders()
+  const res = await fetch(`${API_BASE}/collection/${igdbId}`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ platforms }),
+  })
+  if (!res.ok) throw new Error('Failed to add to collection')
+}
+
+export async function removeFromCollection(igdbId: number): Promise<void> {
+  const headers = await authHeaders()
+  const res = await fetch(`${API_BASE}/collection/${igdbId}`, { method: 'DELETE', headers })
+  if (!res.ok) throw new Error('Failed to remove from collection')
+}
+
+export async function checkCollection(igdbIds: number[]): Promise<Record<number, boolean>> {
+  const headers = await authHeaders()
+  const res = await fetch(`${API_BASE}/collection/check?igdbIds=${igdbIds.join(',')}`, { headers })
+  if (!res.ok) throw new Error('Failed to check collection')
+  return res.json()
+}
+
+// --- Steam APIs (authenticated) ---
+
+export async function getSteamStatus(): Promise<SteamConnection | null> {
+  const headers = await authHeaders()
+  const res = await fetch(`${API_BASE}/steam/status`, { headers })
+  if (!res.ok) throw new Error('Failed to fetch Steam status')
+  return res.json()
+}
+
+export async function getSteamConnectUrl(): Promise<string> {
+  const headers = await authHeaders()
+  const res = await fetch(`${API_BASE}/steam/connect`, { headers })
+  if (!res.ok) throw new Error('Failed to get Steam connect URL')
+  const data = await res.json()
+  return data.url
+}
+
+export async function importSteamLibrary(): Promise<SteamImportResult> {
+  const headers = await authHeaders()
+  const res = await fetch(`${API_BASE}/steam/import`, { method: 'POST', headers })
+  if (!res.ok) throw new Error('Failed to import Steam library')
+  return res.json()
+}
+
+export async function disconnectSteam(): Promise<void> {
+  const headers = await authHeaders()
+  const res = await fetch(`${API_BASE}/steam/disconnect`, { method: 'DELETE', headers })
+  if (!res.ok) throw new Error('Failed to disconnect Steam')
 }
 
 /**

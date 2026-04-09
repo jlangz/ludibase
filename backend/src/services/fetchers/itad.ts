@@ -59,7 +59,7 @@ export class ItadService {
               if (res.status === 429) console.warn('[ITAD] Rate limited, slowing down')
               return null
             }
-            const data: { found: boolean; game?: { id: string; title: string } } = await res.json()
+            const data = (await res.json()) as { found: boolean; game?: { id: string; title: string } }
             if (data.found && data.game) {
               return { inputTitle: title, itadId: data.game.id }
             }
@@ -106,7 +106,7 @@ export class ItadService {
         continue
       }
 
-      const data: Array<{ id: string; title?: string; subs?: Array<{ name: string }> }> = await res.json()
+      const data = (await res.json()) as Array<{ id: string; title?: string; subs?: Array<{ name: string }> }>
       for (const entry of data) {
         const services: string[] = []
         for (const sub of entry.subs ?? []) {

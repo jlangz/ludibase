@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
+import { CollectionButton } from '../components/CollectionButton'
 import { useQuery } from '@tanstack/react-query'
 import { igdbImageUrl, getGameSubscriptions } from '../lib/api'
 import { SUBSCRIPTION_SERVICES } from '../constants/gaming'
@@ -82,6 +83,10 @@ export function GamePage() {
             {game.publisher && game.publisher !== game.developer && (
               <span className="text-gray-500">{game.publisher}</span>
             )}
+          </div>
+
+          <div className="mt-4">
+            <CollectionButton igdbId={game.igdbId} gamePlatforms={game.platforms} />
           </div>
 
           {/* Rating */}

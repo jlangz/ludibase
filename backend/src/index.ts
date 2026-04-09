@@ -7,6 +7,10 @@ import { healthRoutes } from './routes/health.js'
 import { gamesRoutes } from './routes/games.js'
 import { importRoutes } from './routes/import.js'
 import { subscriptionRoutes } from './routes/subscriptions.js'
+import { collectionRoutes } from './routes/collection.js'
+import { steamRoutes } from './routes/steam.js'
+import { SteamService } from './services/steam.js'
+import { SteamImporter } from './services/steam-importer.js'
 import { IgdbService } from './services/igdb.js'
 import { GameImporter } from './services/game-importer.js'
 import { SubscriptionSyncer } from './services/subscription-syncer.js'
@@ -42,6 +46,20 @@ app.route('/', healthRoutes(db))
 app.route('/', gamesRoutes(db, igdb))
 app.route('/', importRoutes(db, importer))
 app.route('/', subscriptionRoutes(db, syncer))
+
+// Collection + Steam (require SUPABASE_URL for JWT verification)
+if (config.supabaseUrl) {
+  app.route('/', collectionRoutes(db, config.supabaseUrl))
+
+  if (config.steamApiKey) {
+    const steam = new SteamService(config.steamApiKey)
+    const steamImporter = new SteamImporter(db, steam)
+    app.route('/', steamRoutes(db, steam, steamImporter, config))
+    console.log('Steam integration enabled')
+  }
+} else {
+  console.log('SUPABASE_URL not set — collection/steam routes disabled')
+}
 
 const server = serve(
   { fetch: app.fetch, port: config.serverPort },

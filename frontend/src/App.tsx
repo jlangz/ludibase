@@ -1,13 +1,14 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { Header } from './components/Header'
-import { LoginForm } from './components/LoginForm'
-import { SignupForm } from './components/SignupForm'
-import { ProfileEditor } from './components/ProfileEditor'
-import { HomePage } from './components/HomePage'
-import { GamePage } from './components/GamePage'
-import { SearchPage } from './components/SearchPage'
-import { ResetPasswordForm } from './components/ResetPasswordForm'
+import { LoginForm } from './pages/LoginForm'
+import { SignupForm } from './pages/SignupForm'
+import { ProfileEditor } from './pages/ProfileEditor'
+import { HomePage } from './pages/HomePage'
+import { GamePage } from './pages/GamePage'
+import { SearchPage } from './pages/SearchPage'
+import { CollectionPage } from './pages/CollectionPage'
+import { ResetPasswordForm } from './pages/ResetPasswordForm'
 import { useAuth } from './hooks/useAuth'
 
 function AppContent() {
@@ -24,6 +25,7 @@ function AppContent() {
             <Route path="/" element={<HomePage />} />
             <Route path="/game/:igdbId" element={<GamePage />} />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/collection" element={<CollectionPage />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/signup" element={<SignupForm />} />
             <Route path="/profile" element={<ProfileEditor />} />

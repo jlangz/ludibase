@@ -123,6 +123,9 @@ export function Header() {
               <span className="text-sm text-gray-400">
                 {profile?.username ? `@${profile.username}` : user.email}
               </span>
+              <Link to="/collection" className="text-sm text-blue-400 hover:underline">
+                My Games
+              </Link>
               <Link to="/profile" className="text-sm text-blue-400 hover:underline">
                 Profile
               </Link>

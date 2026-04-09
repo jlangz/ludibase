@@ -63,6 +63,31 @@ export const subscriptionSyncRuns = pgTable('subscription_sync_runs', {
   completedAt: timestamp('completed_at', { withTimezone: true }),
 })
 
+export const steamConnections = pgTable('steam_connections', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').notNull().references(() => profiles.id).unique(),
+  steamId: text('steam_id').notNull().unique(),
+  steamUsername: text('steam_username'),
+  steamAvatarUrl: text('steam_avatar_url'),
+  connectedAt: timestamp('connected_at', { withTimezone: true }).defaultNow().notNull(),
+  lastImportAt: timestamp('last_import_at', { withTimezone: true }),
+})
+
+export const userGameCollection = pgTable('user_game_collection', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').notNull().references(() => profiles.id),
+  gameId: integer('game_id').notNull().references(() => games.id),
+  source: text('source').notNull(),
+  ownedPlatforms: jsonb('owned_platforms').$type<string[]>(),
+  steamAppId: integer('steam_app_id'),
+  steamPlaytimeMinutes: integer('steam_playtime_minutes'),
+  addedAt: timestamp('added_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('user_game_collection_user_game_idx').on(table.userId, table.gameId),
+  index('user_game_collection_user_id_idx').on(table.userId),
+])
+
 export const importRuns = pgTable('import_runs', {
   id: serial('id').primaryKey(),
   type: text('type').notNull(),
