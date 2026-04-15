@@ -3,9 +3,13 @@ import { desc } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import type { GameImporter } from '../services/game-importer.js'
 import { importRuns } from '../db/schema.js'
+import { requireAdmin } from '../middleware/admin.js'
 
 export function importRoutes(db: Database, importer: GameImporter) {
   const app = new Hono()
+
+  app.use('/import/bulk', requireAdmin())
+  app.use('/import/incremental', requireAdmin())
 
   /**
    * POST /import/bulk

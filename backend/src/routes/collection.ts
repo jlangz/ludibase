@@ -238,6 +238,7 @@ export function collectionRoutes(db: Database, supabaseUrl: string) {
 
     const igdbIds = idsParam.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n) && n > 0)
     if (igdbIds.length === 0) return c.json({})
+    if (igdbIds.length > 100) return c.json({ error: 'Maximum 100 IDs per request' }, 400)
 
     const results = await db
       .select({
