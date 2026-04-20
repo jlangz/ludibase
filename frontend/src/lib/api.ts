@@ -9,6 +9,12 @@ async function authHeaders(): Promise<HeadersInit> {
   return { Authorization: `Bearer ${session.access_token}` }
 }
 
+export async function fetchGame(igdbId: number): Promise<GameSearchResult> {
+  const res = await fetch(`${API_BASE}/games/${igdbId}`)
+  if (!res.ok) throw new Error('Game not found')
+  return res.json()
+}
+
 export async function searchGames(query: string): Promise<GameSearchResult[]> {
   const res = await fetch(`${API_BASE}/games/search?q=${encodeURIComponent(query)}`)
   if (!res.ok) {

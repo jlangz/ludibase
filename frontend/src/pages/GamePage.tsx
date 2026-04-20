@@ -1,21 +1,12 @@
 import { useParams, Link } from 'react-router-dom'
 import { CollectionButton } from '../components/CollectionButton'
 import { useQuery } from '@tanstack/react-query'
-import { igdbImageUrl, getGameSubscriptions, getGamePrices } from '../lib/api'
+import { igdbImageUrl, getGameSubscriptions, getGamePrices, fetchGame } from '../lib/api'
 import { SUBSCRIPTION_SERVICES } from '../constants/gaming'
-import type { GameSearchResult } from '../types'
-
-const API_BASE = '/api'
 
 const serviceLabels = Object.fromEntries(
   SUBSCRIPTION_SERVICES.map((s) => [s.value, s.label])
 )
-
-async function fetchGame(igdbId: number): Promise<GameSearchResult> {
-  const res = await fetch(`${API_BASE}/games/${igdbId}`)
-  if (!res.ok) throw new Error('Game not found')
-  return res.json()
-}
 
 export function GamePage() {
   const { igdbId } = useParams<{ igdbId: string }>()
