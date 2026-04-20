@@ -27,7 +27,12 @@ export async function loadConfig(): Promise<Config> {
 
   if (env) {
     console.log(`[Config] Loading from Parameter Store (${env})...`)
-    await loadFromParameterStore(env)
+    try {
+      await loadFromParameterStore(env)
+    } catch (err) {
+      console.error(`[Config] Failed to load from Parameter Store:`, err instanceof Error ? err.message : err)
+      throw err
+    }
   }
 
   const databaseUrl = process.env.DATABASE_URL

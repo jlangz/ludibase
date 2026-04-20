@@ -37,7 +37,7 @@ jobs:
               "docker build -t ${{ env.CONTAINER_NAME }} .",
               "docker stop ${{ env.CONTAINER_NAME }} 2>/dev/null || true",
               "docker rm ${{ env.CONTAINER_NAME }} 2>/dev/null || true",
-              "docker run -d --name ${{ env.CONTAINER_NAME }} -e LUDIBASE_ENV=${{ env.LUDIBASE_ENV }} -e SERVER_PORT=8080 -p ${{ env.PORT }}:8080 --restart unless-stopped ${{ env.CONTAINER_NAME }}",
+              "docker run -d --name ${{ env.CONTAINER_NAME }} --network host -e LUDIBASE_ENV=${{ env.LUDIBASE_ENV }} -e SERVER_PORT=${{ env.PORT }} --restart unless-stopped ${{ env.CONTAINER_NAME }}",
               "echo Deployed ${{ github.ref_name }} as ${{ env.CONTAINER_NAME }} on port ${{ env.PORT }} at $(date)"
             ]' \
             --output text
