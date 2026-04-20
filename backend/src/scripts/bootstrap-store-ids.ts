@@ -3,7 +3,7 @@ import { loadConfig } from '../config.js'
 import { createDb } from '../db/index.js'
 import { gameStoreIds, gameSubscriptions, userGameCollection } from '../db/schema.js'
 
-const config = loadConfig()
+const config = await loadConfig()
 const { db, client } = await createDb(config.databaseUrl)
 
 console.log('[Bootstrap] Populating game_store_ids from existing data...')

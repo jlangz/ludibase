@@ -16,7 +16,7 @@ import { SubscriptionSyncer } from './services/subscription-syncer.js'
 import { registerAllFetchers } from './services/register-fetchers.js'
 import { startScheduler } from './scheduler/index.js'
 
-const config = loadConfig()
+const config = await loadConfig()
 
 const { db, client } = await createDb(config.databaseUrl)
 
@@ -41,7 +41,17 @@ const scheduler = startScheduler(importer, syncer)
 
 const app = new Hono()
 app.use('*', cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: (origin) => {
+    if (!process.env.CORS_ORIGIN) return origin || '*'
+    if (!origin) return '*'
+    // Allow exact match or any subdomain
+    const allowed = process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    for (const pattern of allowed) {
+      if (origin === pattern) return origin
+      if (pattern.startsWith('*.') && origin.endsWith(pattern.slice(1))) return origin
+    }
+    return null
+  },
 }))
 app.route('/', healthRoutes(db))
 app.route('/', gamesRoutes(db, igdb))

@@ -3,6 +3,7 @@ import { eq, sql, and, isNull, inArray } from 'drizzle-orm'
 import type { Database } from '../db/index.js'
 import { games, gameSubscriptions } from '../db/schema.js'
 import type { SubscriptionSyncer } from '../services/subscription-syncer.js'
+import { requireAdmin } from '../middleware/admin.js'
 
 const SERVICE_FAMILIES: Record<string, { name: string; tiers: string[] }> = {
   gamepass: { name: 'Xbox Game Pass', tiers: ['gamepass-core', 'gamepass-standard', 'gamepass-ultimate'] },
@@ -193,7 +194,7 @@ export function subscriptionRoutes(db: Database, syncer: SubscriptionSyncer) {
    * POST /subscriptions/sync?source=geforce-now
    * Manual sync trigger. Optional source parameter to run a single fetcher.
    */
-  app.post('/subscriptions/sync', async (c) => {
+  app.post('/subscriptions/sync', requireAdmin(), async (c) => {
     const source = c.req.query('source')
 
     // Run async — don't block the response
