@@ -16,7 +16,7 @@ import { SubscriptionSyncer } from './services/subscription-syncer.js'
 import { registerAllFetchers } from './services/register-fetchers.js'
 import { startScheduler } from './scheduler/index.js'
 
-const config = loadConfig()
+const config = await loadConfig()
 
 const { db, client } = await createDb(config.databaseUrl)
 

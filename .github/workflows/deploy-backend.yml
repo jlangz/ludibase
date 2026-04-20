@@ -10,6 +10,11 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      CONTAINER_NAME: ${{ github.ref_name == 'main' && 'ludibase-prod' || 'ludibase-staging' }}
+      PORT: ${{ github.ref_name == 'main' && '8080' || '8081' }}
+      LUDIBASE_ENV: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
+
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -23,5 +28,16 @@ jobs:
           aws ssm send-command \
             --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
             --document-name "AWS-RunShellScript" \
-            --parameters 'commands=["cd /home/ec2-user/ludibase && git pull origin ${{ github.ref_name }} && cd backend && pnpm install --frozen-lockfile && pm2 restart ludibase-backend && echo Deployed ${{ github.ref_name }} at $(date)"]' \
+            --parameters commands='[
+              "cd /home/ec2-user/ludibase",
+              "git fetch origin",
+              "git checkout ${{ github.ref_name }}",
+              "git pull origin ${{ github.ref_name }}",
+              "cd backend",
+              "docker build -t ${{ env.CONTAINER_NAME }} .",
+              "docker stop ${{ env.CONTAINER_NAME }} 2>/dev/null || true",
+              "docker rm ${{ env.CONTAINER_NAME }} 2>/dev/null || true",
+              "docker run -d --name ${{ env.CONTAINER_NAME }} -e LUDIBASE_ENV=${{ env.LUDIBASE_ENV }} -e SERVER_PORT=8080 -p ${{ env.PORT }}:8080 --restart unless-stopped ${{ env.CONTAINER_NAME }}",
+              "echo Deployed ${{ github.ref_name }} as ${{ env.CONTAINER_NAME }} on port ${{ env.PORT }} at $(date)"
+            ]' \
             --output text
