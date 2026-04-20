@@ -9,6 +9,7 @@ applications:
             - pnpm install
         build:
           commands:
+            - echo "VITE_API_URL=$VITE_API_URL"
             - pnpm run build
       artifacts:
         baseDirectory: dist
