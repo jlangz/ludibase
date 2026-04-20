@@ -31,8 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setNeedsPasswordReset(true)
         }
 
-        // Clear cached data when user signs out to prevent data leaks
-        if (!session) {
+        // Clear cached data when user explicitly signs out
+        if (event === 'SIGNED_OUT') {
           queryClient.clear()
         }
       }
