@@ -89,6 +89,21 @@ export const userGameCollection = pgTable('user_game_collection', {
   index('user_game_collection_user_id_idx').on(table.userId),
 ])
 
+export const savedArticles = pgTable('saved_articles', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id').notNull().references(() => profiles.id),
+  articleUrl: text('article_url').notNull(),
+  title: text('title').notNull(),
+  description: text('description'),
+  imageUrl: text('image_url'),
+  source: text('source').notNull(),
+  pubDate: timestamp('pub_date', { withTimezone: true }),
+  savedAt: timestamp('saved_at', { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex('saved_articles_user_url_idx').on(table.userId, table.articleUrl),
+  index('saved_articles_user_id_idx').on(table.userId),
+])
+
 export const gameStoreIds = pgTable('game_store_ids', {
   id: serial('id').primaryKey(),
   gameId: integer('game_id').notNull().references(() => games.id),

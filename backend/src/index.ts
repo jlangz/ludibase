@@ -57,7 +57,7 @@ app.route('/', healthRoutes(db))
 app.route('/', gamesRoutes(db, igdb))
 app.route('/', importRoutes(db, importer))
 app.route('/', subscriptionRoutes(db, syncer))
-app.route('/', newsRoutes())
+app.route('/', newsRoutes(db, config.supabaseUrl))
 
 // Collection + Steam (require SUPABASE_URL for JWT verification)
 if (config.supabaseUrl) {

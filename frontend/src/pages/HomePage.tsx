@@ -9,7 +9,11 @@ import {
   igdbImageUrl,
   getNews,
 } from '../lib/api'
+import type { NewsItem } from '../lib/api'
+import { useSavedArticles } from '../hooks/useSavedArticles'
+import { useAuth } from '../hooks/useAuth'
 import { SUBSCRIPTION_SERVICES, SERVICE_FAMILIES } from '../constants/gaming'
+import { X, ExternalLink, Bookmark } from 'lucide-react'
 import type { GameSearchResult } from '../types'
 
 const serviceLabels = Object.fromEntries(
@@ -154,6 +158,9 @@ function BrowseByServiceSection() {
 /* ---------- News ---------- */
 
 function NewsSection() {
+  const [selectedArticle, setSelectedArticle] = useState<NewsItem | null>(null)
+  const { user } = useAuth()
+  const saved = useSavedArticles()
   const { data: news = [], isLoading } = useQuery({
     queryKey: ['news'],
     queryFn: () => getNews(8),
@@ -177,15 +184,20 @@ function NewsSection() {
 
   return (
     <section className="mt-10">
-      <h2 className="mb-4 text-xl font-bold">Gaming News</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-xl font-bold">Gaming News</h2>
+        {user && (
+          <Link to="/saved-articles" className="text-sm text-blue-400 hover:underline">
+            Saved Articles
+          </Link>
+        )}
+      </div>
       <div className="space-y-3">
         {news.map((item, i) => (
-          <a
+          <button
             key={`${item.link}-${i}`}
-            href={item.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex gap-4 rounded-lg border border-gray-800 bg-gray-900 p-3 transition-colors hover:border-gray-600"
+            onClick={() => setSelectedArticle(item)}
+            className="flex w-full gap-4 rounded-lg border border-gray-800 bg-gray-900 p-3 text-left transition-colors hover:border-gray-600"
           >
             {item.imageUrl && (
               <img
@@ -196,7 +208,14 @@ function NewsSection() {
               />
             )}
             <div className="min-w-0 flex-1">
-              <p className="font-medium leading-tight line-clamp-2">{item.title}</p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-medium leading-tight line-clamp-2">{item.title}</p>
+                {user && (
+                  <Bookmark
+                    className={`h-4 w-4 shrink-0 ${saved.isSaved(item.link) ? 'fill-blue-400 text-blue-400' : 'text-gray-600'}`}
+                  />
+                )}
+              </div>
               {item.description && (
                 <p className="mt-1 text-sm text-gray-400 line-clamp-2">{item.description}</p>
               )}
@@ -206,10 +225,95 @@ function NewsSection() {
                 <span>{formatTimeAgo(item.pubDate)}</span>
               </div>
             </div>
-          </a>
+          </button>
         ))}
       </div>
+
+      {selectedArticle && (
+        <ArticleModal
+          article={selectedArticle}
+          isSaved={saved.isSaved(selectedArticle.link)}
+          onSave={() => saved.isSaved(selectedArticle.link) ? saved.unsave(selectedArticle.link) : saved.save(selectedArticle)}
+          showSave={!!user}
+          onClose={() => setSelectedArticle(null)}
+        />
+      )}
     </section>
+  )
+}
+
+function ArticleModal({
+  article,
+  isSaved,
+  onSave,
+  showSave,
+  onClose,
+}: {
+  article: NewsItem
+  isSaved: boolean
+  onSave: () => void
+  showSave: boolean
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-gray-700 bg-gray-900 shadow-2xl">
+        {article.imageUrl && (
+          <img
+            src={article.imageUrl}
+            alt=""
+            className="h-64 w-full rounded-t-lg object-cover"
+          />
+        )}
+
+        <div className="p-6">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-xl font-bold leading-tight">{article.title}</h2>
+            <button onClick={onClose} className="shrink-0 rounded p-1 text-gray-400 hover:bg-gray-800 hover:text-gray-200">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
+            <span>{article.source}</span>
+            <span>·</span>
+            <span>{formatTimeAgo(article.pubDate)}</span>
+          </div>
+
+          {article.description && (
+            <p className="mt-4 leading-relaxed text-gray-300">{article.description}</p>
+          )}
+
+          <div className="mt-6 flex items-center gap-3">
+            <a
+              href={article.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Read Full Article
+            </a>
+            {showSave && (
+              <button
+                onClick={onSave}
+                className={`flex items-center gap-2 rounded px-4 py-2 text-sm font-medium transition-colors ${
+                  isSaved
+                    ? 'bg-blue-900/40 text-blue-400 hover:bg-red-900/40 hover:text-red-400'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                }`}
+              >
+                <Bookmark className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
+                {isSaved ? 'Saved' : 'Save for Later'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 

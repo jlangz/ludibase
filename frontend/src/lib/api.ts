@@ -107,6 +107,61 @@ export async function getNews(limit = 20): Promise<NewsItem[]> {
   return data.items
 }
 
+export interface SavedArticle extends NewsItem {
+  savedAt: string
+}
+
+export async function saveArticle(article: NewsItem): Promise<void> {
+  const headers = await authHeaders()
+  const res = await fetch(`${API_BASE}/news/save`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      url: article.link,
+      title: article.title,
+      description: article.description,
+      imageUrl: article.imageUrl,
+      source: article.source,
+      pubDate: article.pubDate,
+    }),
+  })
+  if (!res.ok) throw new Error('Failed to save article')
+}
+
+export async function unsaveArticle(url: string): Promise<void> {
+  const headers = await authHeaders()
+  const res = await fetch(`${API_BASE}/news/save`, {
+    method: 'DELETE',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url }),
+  })
+  if (!res.ok) throw new Error('Failed to unsave article')
+}
+
+export async function getSavedArticles(page = 1, pageSize = 20): Promise<{
+  articles: SavedArticle[]
+  total: number
+  page: number
+  pageSize: number
+}> {
+  const headers = await authHeaders()
+  const res = await fetch(`${API_BASE}/news/saved?page=${page}&pageSize=${pageSize}`, { headers })
+  if (!res.ok) throw new Error('Failed to fetch saved articles')
+  const data = await res.json()
+  return {
+    ...data,
+    articles: data.articles.map((a: { url: string; title: string; description: string; imageUrl: string | null; source: string; pubDate: string; savedAt: string }) => ({
+      link: a.url,
+      title: a.title,
+      description: a.description ?? '',
+      imageUrl: a.imageUrl,
+      source: a.source,
+      pubDate: a.pubDate,
+      savedAt: a.savedAt,
+    })),
+  }
+}
+
 export interface GamePrice {
   store: string
   storeName: string

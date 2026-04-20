@@ -9,6 +9,7 @@ import { GamePage } from './pages/GamePage'
 import { SearchPage } from './pages/SearchPage'
 import { CollectionPage } from './pages/CollectionPage'
 import { ServicePage } from './pages/ServicePage'
+import { SavedArticlesPage } from './pages/SavedArticlesPage'
 import { ResetPasswordForm } from './pages/ResetPasswordForm'
 import { useAuth } from './hooks/useAuth'
 
@@ -28,6 +29,7 @@ function AppContent() {
             <Route path="/search" element={<SearchPage />} />
             <Route path="/collection" element={<CollectionPage />} />
             <Route path="/services/:family" element={<ServicePage />} />
+            <Route path="/saved-articles" element={<SavedArticlesPage />} />
             <Route path="/login" element={<LoginForm />} />
             <Route path="/signup" element={<SignupForm />} />
             <Route path="/profile" element={<ProfileEditor />} />
