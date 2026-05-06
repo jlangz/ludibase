@@ -33,3 +33,4 @@ pnpm-debug.log*
 coverage/
 .mcp.json
 .claude
+CLAUDE.md
