@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { getServiceFamily, igdbImageUrl } from '../lib/api'
 import { SERVICE_FAMILIES } from '../constants/gaming'
 import { Search, ArrowUpDown } from 'lucide-react'
@@ -49,6 +49,7 @@ export function ServicePage() {
     }),
     enabled: !!familyKey && !!family,
     staleTime: 5 * 60_000,
+    placeholderData: keepPreviousData,
   })
 
   if (!family) {

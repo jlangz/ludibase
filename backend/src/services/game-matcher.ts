@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
-import type { Database } from '../db/index.js'
-import { games } from '../db/schema.js'
+import type { Database } from '../db/index'
+import { games } from '../db/schema'
 
 export interface MatchResult {
   gameId: number

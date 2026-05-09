@@ -1,19 +1,15 @@
 import { readFile } from 'fs/promises'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
+import { join } from 'path'
 import { sql } from 'drizzle-orm'
-import type { Config } from '../config.js'
-import type { Database } from '../db/index.js'
-import { games } from '../db/schema.js'
-import type { SubscriptionSyncer, FetcherResult } from './subscription-syncer.js'
-import { fetchGeforceNowCatalog, GEFORCE_NOW_SLUG, GEFORCE_NOW_SOURCE } from './fetchers/geforce-now.js'
-import { fetchGamePassCatalog, XBOX_SOURCE } from './fetchers/xbox-gamepass.js'
-import { fetchNintendoCatalog, NINTENDO_ONLINE_SLUG, NINTENDO_SOURCE } from './fetchers/nintendo.js'
-import { fetchPsPlusCatalog, PS_PLUS_EXTRA_SLUG, PS_PLUS_PREMIUM_SLUG, PS_PLUS_SOURCE } from './fetchers/ps-plus.js'
-import { ItadService, ITAD_SOURCE } from './fetchers/itad.js'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+import type { Config } from '../config'
+import type { Database } from '../db/index'
+import { games } from '../db/schema'
+import type { SubscriptionSyncer, FetcherResult } from './subscription-syncer'
+import { fetchGeforceNowCatalog, GEFORCE_NOW_SLUG, GEFORCE_NOW_SOURCE } from './fetchers/geforce-now'
+import { fetchGamePassCatalog, XBOX_SOURCE } from './fetchers/xbox-gamepass'
+import { fetchNintendoCatalog, NINTENDO_ONLINE_SLUG, NINTENDO_SOURCE } from './fetchers/nintendo'
+import { fetchPsPlusCatalog, PS_PLUS_EXTRA_SLUG, PS_PLUS_PREMIUM_SLUG, PS_PLUS_SOURCE } from './fetchers/ps-plus'
+import { ItadService, ITAD_SOURCE } from './fetchers/itad'
 
 export function registerAllFetchers(syncer: SubscriptionSyncer, config: Config, db?: Database) {
   // GeForce NOW — static JSON, most reliable

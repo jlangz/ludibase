@@ -1,4 +1,4 @@
-import type { IgdbGame, GameSearchResult } from '../types/igdb.js'
+import type { IgdbGame, GameSearchResult } from '../types/igdb'
 
 interface IgdbServiceConfig {
   clientId: string

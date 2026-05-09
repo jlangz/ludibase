@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
-import type { Database } from '../db/index.js'
-import { games, gameStoreIds } from '../db/schema.js'
+import type { Database } from '../db/index'
+import { games, gameStoreIds } from '../db/schema'
 
 export interface GamePrice {
   store: string

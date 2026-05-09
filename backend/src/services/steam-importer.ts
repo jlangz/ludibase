@@ -1,8 +1,8 @@
 import { eq, sql } from 'drizzle-orm'
-import type { Database } from '../db/index.js'
-import { userGameCollection, steamConnections } from '../db/schema.js'
-import type { SteamService } from './steam.js'
-import { GameMatcher } from './game-matcher.js'
+import type { Database } from '../db/index'
+import { userGameCollection, steamConnections } from '../db/schema'
+import type { SteamService } from './steam'
+import { GameMatcher } from './game-matcher'
 
 export interface SteamImportResult {
   total: number

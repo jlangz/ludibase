@@ -1,8 +1,8 @@
 import { eq, sql, max } from 'drizzle-orm'
-import type { Database } from '../db/index.js'
-import type { IgdbService } from './igdb.js'
-import type { IgdbGame } from '../types/igdb.js'
-import { games, importRuns } from '../db/schema.js'
+import type { Database } from '../db/index'
+import type { IgdbService } from './igdb'
+import type { IgdbGame } from '../types/igdb'
+import { games, importRuns } from '../db/schema'
 
 // IGDB platform IDs for subscription-relevant platforms
 const PLATFORM_IDS = [6, 48, 49, 130, 167, 169] // PC, PS4, XONE, Switch, PS5, Series X|S

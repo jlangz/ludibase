@@ -3,7 +3,7 @@ import { resolve } from 'path'
 import { SSMClient, GetParametersByPathCommand } from '@aws-sdk/client-ssm'
 
 // Load .env from project root for local development
-dotenv.config({ path: resolve(import.meta.dirname, '../../.env') })
+dotenv.config({ path: resolve(__dirname, '../../.env') })
 
 export interface Config {
   databaseUrl: string
@@ -16,6 +16,8 @@ export interface Config {
   supabaseUrl?: string
   publicUrl: string
   frontendUrl: string
+  adminKey?: string
+  corsOrigin?: string
 }
 
 /**
@@ -51,8 +53,10 @@ export async function loadConfig(): Promise<Config> {
   const supabaseUrl = process.env.SUPABASE_URL || undefined
   const publicUrl = process.env.PUBLIC_URL || `http://localhost:${serverPort}`
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
+  const adminKey = process.env.ADMIN_KEY || undefined
+  const corsOrigin = process.env.CORS_ORIGIN || undefined
 
-  return { databaseUrl, serverPort, twitchClientId, twitchClientSecret, itadApiKey, platPricesApiKey, steamApiKey, supabaseUrl, publicUrl, frontendUrl }
+  return { databaseUrl, serverPort, twitchClientId, twitchClientSecret, itadApiKey, platPricesApiKey, steamApiKey, supabaseUrl, publicUrl, frontendUrl, adminKey, corsOrigin }
 }
 
 async function loadFromParameterStore(env: string) {
