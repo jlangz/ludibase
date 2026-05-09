@@ -6,7 +6,9 @@ import {
   Param,
   ParseIntPipe,
   Query,
+  UseInterceptors,
 } from '@nestjs/common'
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager'
 import { eq, sql } from 'drizzle-orm'
 import type { Database } from '../../db'
 import { games, gameSubscriptions } from '../../db/schema'
@@ -145,6 +147,8 @@ export class GamesController {
   }
 
   @Get('popular')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(60 * 60 * 1000)
   async popular(@Query() { limit, page }: PopularQueryDto) {
     const offset = (page - 1) * limit
     const results = await this.db
