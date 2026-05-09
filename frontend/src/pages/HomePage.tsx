@@ -95,7 +95,7 @@ function BrowseByServiceSection() {
     staleTime: 5 * 60_000,
   })
 
-  const { data: serviceData } = useQuery({
+  const { data: serviceData, isLoading: isLoadingService } = useQuery({
     queryKey: ['serviceGames', activeService],
     queryFn: () => getServiceGames(activeService!, 1, 12),
     enabled: !!activeService,
@@ -123,31 +123,41 @@ function BrowseByServiceSection() {
         ))}
       </div>
 
-      {activeService && serviceData && (
+      {activeService && (
         <div className="mt-4">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {serviceData.games.map((game) => (
-              <GameTile
-                key={game.igdbId}
-                game={game}
-                services={[activeService]}
-              />
-            ))}
-          </div>
-          {serviceData.total > 12 && (
-            <div className="mt-3 flex items-center gap-3">
-              <span className="text-sm text-gray-500">
-                Showing 12 of {serviceData.total} games
-              </span>
-              {slugToFamily[activeService] && (
-                <Link
-                  to={`/services/${slugToFamily[activeService]}`}
-                  className="text-sm text-blue-400 hover:underline"
-                >
-                  View all →
-                </Link>
-              )}
+          {isLoadingService || !serviceData ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div key={i} className="animate-pulse rounded-lg bg-gray-800" style={{ aspectRatio: '3/4' }} />
+              ))}
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                {serviceData.games.map((game) => (
+                  <GameTile
+                    key={game.igdbId}
+                    game={game}
+                    services={[activeService]}
+                  />
+                ))}
+              </div>
+              {serviceData.total > 12 && (
+                <div className="mt-3 flex items-center gap-3">
+                  <span className="text-sm text-gray-500">
+                    Showing 12 of {serviceData.total} games
+                  </span>
+                  {slugToFamily[activeService] && (
+                    <Link
+                      to={`/services/${slugToFamily[activeService]}`}
+                      className="text-sm text-blue-400 hover:underline"
+                    >
+                      View all →
+                    </Link>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
